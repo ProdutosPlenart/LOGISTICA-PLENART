@@ -684,6 +684,9 @@ body.pv-open,body.login-open,body.p-open{overflow:hidden}
 }
 @media (max-width:760px){ .arow>.c-ev,.arow.comev>.c-quem{grid-column:1/-1} .arow input.dt{padding-inline:1px;font-size:12.5px} }
 
+.c-desonde{display:flex;flex-direction:column;gap:3px}
+.c-desonde select.desev{border-left:3px solid var(--orange)!important;font-size:11.5px!important}
+
 </style>
 </head>
 <body>
@@ -976,7 +979,7 @@ function normItem(o){
   ['eventoId','obs','motorista','veiculoId','status'].forEach(s);
   if(x.tipo==='VIAGEM'){ x.sentido=x.sentido==='TRAZ'?'TRAZ':'LEVA';
     if(x.carga!=null&&x.leva==null&&x.traz==null){ if(x.sentido==='TRAZ') x.traz=x.carga; else x.leva=x.carga; } delete x.carga;
-    ['caminhao','cavaloId','cavalo','origem','leva','traz','carData','carHora','carLocal','carLocalNome','empId','empTxt','carEquipe','saiData','saiHora','cheData','cheHora','sevData','sevHora','volData','volHora','destino'].forEach(s);
+    ['caminhao','cavaloId','cavalo','origem','leva','traz','carData','carHora','carLocal','carLocalNome','empId','empTxt','carEquipe','saiData','saiHora','cheData','cheHora','sevData','sevHora','volData','volHora','destino','desEvId'].forEach(s);
     if(!x.status) x.status='PROGRAMADO'; if(['GALPÃO','EVENTO','OUTRO'].indexOf(x.carLocal)<0) x.carLocal=x.sentido==='TRAZ'?'EVENTO':'GALPÃO'; if(['PRÓPRIO','AGREGADO','TERCEIRO'].indexOf(x.origem)<0) x.origem='PRÓPRIO'; }
   else if(x.tipo==='EQUIP'){ ['equipId','equipTxt','origem','fornecedor','de','ate','vai','vaiHora','operador'].forEach(s); if(!x.status) x.status='PROGRAMADA'; if(x.origem!=='ALUGADA') x.origem='NOSSA'; }
   else { ['carro','quem','hora','saiDe','volta'].forEach(s); x.dias=Array.isArray(x.dias)?Array.from(new Set(x.dias.filter(k=>ISO_RE.test(k)))).sort():[]; if(!x.status) x.status='PROGRAMADO'; }
@@ -1432,7 +1435,7 @@ function eventosHTML(){
   const ro=readOnly;
   let h='<div class="toolbar"><input class="search" id="q" data-keep="q" type="search" placeholder="Buscar evento, local ou produtor" value="'+esc(UI.q)+'" autocomplete="off" aria-label="Buscar evento, local ou produtor">'
     +'<div class="chips" role="group" aria-label="Quais eventos">'+[['proximos','Agora e próximos'],['todos','Todos'],['arquivados','Arquivados']].map(([k,l])=>'<button type="button" class="chip'+(UI.evf===k?' on':'')+'" data-evf="'+k+'" aria-pressed="'+(UI.evf===k)+'">'+l+'</button>').join('')+'</div>'
-    +'<span class="spacer"></span><span class="lbl">Clique no evento pra programar</span>'+(ro?'':'<button type="button" class="btn primary" data-act="novo-evento">+ Evento</button>')+'</div>';
+    +'<span class="spacer"></span><span class="lbl">Clique no evento pra programar</span><button type="button" class="btn" data-act="pdf-evs">PDF da lista</button>'+(ro?'':'<button type="button" class="btn primary" data-act="novo-evento">+ Evento</button>')+'</div>';
   if(!eventos.length) return h+'<div class="emptymsg">Nenhum evento ainda.'+(ro?'':' Clique em <b>+ Evento</b> pra cadastrar, ou traga os eventos de um backup do Demandas em <b>↑ Trazer do Demandas</b> (na linha de cima).')+'</div>';
   const G=gruposEventos();
   if(!G.some(g=>g[1].length)) return h+'<div class="emptymsg">Nenhum evento '+(UI.evf==='arquivados'?'arquivado':'nesse filtro')+(UI.q?' com "'+esc(UI.q)+'"':'')+'.</div>';
@@ -1572,7 +1575,7 @@ const ONDE_CAR={GALPÃO:'CARREGA NO GALPÃO NOSSO',OUTRO:'CARREGA EM OUTRA EMPRE
 const ONDE_DES={GALPÃO:'DESCARREGA NO GALPÃO',EVENTO:'DESCARREGA NO EVENTO'};
 function ondeTxt(f,des){ return f.onde?'SÓ O QUE '+(des?ONDE_DES[f.onde]||'':ONDE_CAR[f.onde]):''; }
 function carregamentosLista(per,f){ return ordCrono(itens.filter(it=>it.tipo==='VIAGEM'&&it.carData&&it.carData>=per.a&&it.carData<=per.b&&evOk(it)&&(!f.ev||it.eventoId===f.ev)&&ondeCar(it,f))); }
-function descarregamentosLista(per,f){ return itens.filter(it=>it.tipo==='VIAGEM'&&desData(it)&&desData(it)>=per.a&&desData(it)<=per.b&&evOk(it)&&(!f.ev||it.eventoId===f.ev)&&ondeDes(it,f))
+function descarregamentosLista(per,f){ return itens.filter(it=>it.tipo==='VIAGEM'&&desData(it)&&desData(it)>=per.a&&desData(it)<=per.b&&evOk(it)&&(!f.ev||it.eventoId===f.ev||(desOutroEv(it)&&it.desEvId===f.ev))&&ondeDes(it,f))
   .sort((a,b)=>{ const ka=dtk(desData(a),desHora(a)), kb=dtk(desData(b),desHora(b)); return ka<kb?-1:ka>kb?1:String(a.criadoEm||a.id).localeCompare(String(b.criadoEm||b.id)); }); }
 function semCarregamento(f){ const t=hoje(); return ordCrono(itens.filter(it=>{ const ev=evById(it.eventoId); return it.tipo==='VIAGEM'&&!cancelado(it)&&!it.carData&&(!it.eventoId||evAtivo(ev))&&(!f.ev||it.eventoId===f.ev)&&ondeCar(it,f)&&(!it.saiData||(it.saiData>=addIso(t,-1)&&it.saiData<=addIso(t,60))); })); }
 function semDescarregamento(f){ const t=hoje(); return ordCrono(itens.filter(it=>{ const ev=evById(it.eventoId); if(it.tipo!=='VIAGEM'||cancelado(it)||desData(it)) return false; if(it.eventoId&&!evAtivo(ev)) return false; if(f.ev&&it.eventoId!==f.ev) return false; if(!ondeDes(it,f)) return false; const base=it.saiData||it.carData; return !!base&&base>=addIso(t,-2)&&base<=addIso(t,60); })); }
@@ -1586,6 +1589,13 @@ const LOC_K={GAL:'GALPÃO',OUT:'OUTRO',EV:'EVENTO'}, LOC_BTN={GAL:'+ No galpão'
 const GRP_DES=[['GAL','DESCARREGA NO GALPÃO',it=>desNoGalpao(it)],['EV','DESCARREGA NO EVENTO',it=>!desNoGalpao(it)]];
 function grupos(arr,G){ return G.map(([k,l,fn])=>[k,l,arr.filter(fn)]).filter(g=>g[2].length); }
 function subHead(k,l,arr,nome,btn){ const n=arr.filter(x=>!cancelado(x)).length; return '<div class="dsub dsub-'+k.toLowerCase()+'"><b>'+esc(l)+'</b><span>'+plural(n,nome,nome+'s')+'</span><span class="spacer"></span>'+(btn||'')+'</div>'; }
+/* descarrega NO EVENTO: em qual evento (vazio = o próprio evento da viagem; outro = transferência, ex.: sai do CBM e descarrega no Ford) */
+function desEvOpcoes(it){ const own=evById(it.eventoId), cur=desOutroEv(it)?it.desEvId:''; const l=evsAtivos().filter(e=>e.id!==it.eventoId).sort((a,b)=>{ const pa=evPer(a), pb=evPer(b); return (pa?pa.a:'9999')<(pb?pb.a:'9999')?-1:1; });
+  if(cur&&!l.some(e=>e.id===cur)) l.unshift(evById(cur));
+  return '<option value=""'+(cur?'':' selected')+'>'+(own?'NO PRÓPRIO: '+esc(evNome(own)):'NO PRÓPRIO EVENTO')+'</option><optgroup label="OUTRO EVENTO (TRANSFERÊNCIA)">'+l.map(e=>'<option value="'+esc(e.id)+'"'+(e.id===cur?' selected':'')+'>'+esc(evNome(e))+'</option>').join('')+'</optgroup>'; }
+function desEv(it){ if(desNoGalpao(it)) return null; return evById(it.desEvId)||evById(it.eventoId)||null; }
+const desOutroEv=it=>!desNoGalpao(it)&&!!it.desEvId&&it.desEvId!==it.eventoId&&!!evById(it.desEvId);
+function desEvTxt(it){ const e=desEv(it); return e?evNome(e):'EVENTO A DEFINIR'; }
 function cheadDes(){ return '<div class="chead comev" aria-hidden="true"><span>Evento</span><span>Onde</span><span>Caminhão</span><span>Motorista</span><span>Descarrega</span><span>Hora</span><span>Situação</span><span></span></div>'; }
 function rowDesHTML(it){
   const ro=readOnly, id=esc(it.id), dis=ro?' disabled':'', gal=desNoGalpao(it), can=cancelado(it);
@@ -1593,7 +1603,8 @@ function rowDesHTML(it){
   let h='<div class="crow'+(can?' cancel':'')+'" data-row="'+id+'" style="--evc:'+(it.eventoId&&evById(it.eventoId)?evCor(it.eventoId):'var(--line-strong)')+'">';
   h+='<div class="cr1">'
     +'<label class="c c-ev"><span>'+(gal?'Veio do evento':'Evento')+'</span><select data-f="eventoId" aria-label="Evento"'+dis+'>'+evOpcoes(it.eventoId)+'</select></label>'
-    +'<label class="c c-sent"><span>Onde</span><select data-f="desOnde" aria-label="Onde descarrega" title="NO GALPÃO: caminhão que busca no evento e descarrega aqui · NO EVENTO: caminhão que leva e descarrega lá"'+dis+'><option value="GALPÃO"'+(gal?' selected':'')+'>NO GALPÃO</option><option value="EVENTO"'+(gal?'':' selected')+'>NO EVENTO</option></select></label>'
+    +'<div class="c c-sent c-desonde"><span>Onde</span><select data-f="desOnde" aria-label="Onde descarrega" title="NO GALPÃO: caminhão que busca no evento e descarrega aqui · NO EVENTO: caminhão que leva e descarrega lá"'+dis+'><option value="GALPÃO"'+(gal?' selected':'')+'>NO GALPÃO</option><option value="EVENTO"'+(gal?'':' selected')+'>NO EVENTO</option></select>'
+      +(gal?'':'<select class="desev" data-f="desEvId" aria-label="Em qual evento descarrega" title="Em qual evento ele descarrega">'+desEvOpcoes(it)+'</select>')+'</div>'
     +'<div class="c c-cam"><span>Caminhão</span>'+caminhaoPick(it)+'</div>'
     +'<label class="c c-mot"><span>Motorista</span><input type="text" data-f="motorista" value="'+esc(it.motorista)+'" placeholder="MOTORISTA" aria-label="Motorista" list="dlMot" autocomplete="off"'+dis+'></label>'
     +'<label class="c c-dt"><span>Descarrega</span><input type="text" class="dt" data-f="'+kD+'" data-kind="data" inputmode="numeric" placeholder="DD/MM" value="'+esc(it[kD]?fmtD(it[kD]):'')+'" aria-label="Dia do descarregamento" autocomplete="off"'+dis+'></label>'
@@ -1603,7 +1614,7 @@ function rowDesHTML(it){
   h+='<div class="cr2 c2"><label class="c c-'+(gal?'traz':'leva')+'"><span>O que descarrega</span><textarea data-f="'+kC+'" data-auto rows="1" placeholder="'+(gal?'EX: GALPÃO 50X30 COMPLETO + LONAS':'EX: ESTRUTURA DO GALPÃO + PALETES DE PISO')+'" aria-label="O que descarrega"'+dis+'>'+esc(it[kC])+'</textarea></label>'
     +'<label class="c"><span>Observações</span><textarea data-f="obs" data-auto rows="1" placeholder="" aria-label="Observações"'+dis+'>'+esc(it.obs)+'</textarea></label></div>';
   const ex=gal?[it.saiData?'SAI PRA BUSCAR '+fmtD(it.saiData)+(it.saiHora?' '+it.saiHora:''):'',it.carData?'CARREGA '+localCar(it)+' '+fmtD(it.carData)+(it.carHora?' '+it.carHora:''):'',it.sevData?'SAI DO EVENTO '+fmtD(it.sevData)+(it.sevHora?' '+it.sevHora:''):'',tr(it.destino)?'DESTINO '+normName(it.destino):''].filter(Boolean)
-            :[it.carData?'CARREGA '+localCar(it)+' '+fmtD(it.carData)+(it.carHora?' '+it.carHora:''):'',it.saiData?'SAI '+fmtD(it.saiData)+(it.saiHora?' '+it.saiHora:''):''].filter(Boolean);
+            :[desOutroEv(it)?'TRANSFERÊNCIA: VEM DO '+evNomeIt(it)+' E DESCARREGA NO '+desEvTxt(it):'',it.carData?'CARREGA '+localCar(it)+' '+fmtD(it.carData)+(it.carHora?' '+it.carHora:''):'',it.saiData?'SAI '+fmtD(it.saiData)+(it.saiHora?' '+it.saiHora:''):''].filter(Boolean);
   if(ex.length) h+='<button type="button" class="cr3" data-act="det" title="Abrir os detalhes">'+esc(ex.join(' · '))+'</button>';
   if(ROWDEL===it.id) h+='<div class="confirm">Tirar este descarregamento do cronograma?<button type="button" class="btn danger solid sm" data-act="tirar-sim">Tirar</button><button type="button" class="btn sm" data-act="tirar-nao">Cancelar</button></div>';
   h+=avisosHTML(it);
@@ -1715,18 +1726,21 @@ function usoCalendario(a,b){
 function calHTML(){
   const m=calMes(), Y=+m.slice(0,4), Mo=+m.slice(5,7), t=hoje();
   const nD=new Date(Y,Mo,0).getDate(), prim=m+'-01', fim=m+'-'+pad2(nD);
-  let h='<div class="toolbar"><div class="pnav"><button type="button" class="btn" data-cn="-1" aria-label="Mês anterior">◀</button><span class="plbl">'+MESES_L[Mo-1]+' '+Y+'</span><button type="button" class="btn" data-cn="1" aria-label="Próximo mês">▶</button><button type="button" class="btn sm" data-cn="0">Hoje</button></div><span class="spacer"></span><span class="lbl">Clique no dia pra ver o detalhe</span></div><div class="toolbar sub"><span class="lbl">Mostrar</span>'+calFiltroHTML()+'</div>';
+  let h='<div class="toolbar"><div class="pnav"><button type="button" class="btn" data-cn="-1" aria-label="Mês anterior">◀</button><span class="plbl">'+MESES_L[Mo-1]+' '+Y+'</span><button type="button" class="btn" data-cn="1" aria-label="Próximo mês">▶</button><button type="button" class="btn sm" data-cn="0">Hoje</button></div><span class="spacer"></span><span class="lbl">Clique no dia pra ver o detalhe</span><button type="button" class="btn primary" data-act="pdf-cal">PDF do relatório</button></div><div class="toolbar sub">'+pesSelHTML('data-cpes',calPes(),['EQUIPE','PROD'])+(calPes()?'<span class="lbl">Mostrando a agenda de <b>'+esc(pesNomeKey(calPes()))+'</b></span>':'<span class="lbl">Mostrar</span>'+calFiltroHTML())+'</div>';
   const evsM=evsAtivos().filter(e=>{ const p=evPer(e); return p&&p.a<=fim&&p.b>=prim; }).sort((a,b)=>{ const pa=evPer(a), pb=evPer(b); return pa.a<pb.a?-1:pa.a>pb.a?1:0; });
   const U=calContagem(prim,fim);
   h+='<div class="fwrap"><div class="calw"><div class="calh">'+DIAS3.slice(1).concat(DIAS3[0]).map(w=>'<span>'+w+'</span>').join('')+'</div><div class="calg">';
   const pad=(parseISO(prim).getDay()+6)%7; for(let i=0;i<pad;i++) h+='<span class="calpad" aria-hidden="true"></span>';
   for(let di=1;di<=nD;di++){ const k=m+'-'+pad2(di), u=U.get(k);
-    const chips=[]; evsM.forEach(e=>{ const fs=fasesDia(e,k); if(fs.length) chips.push('<span class="cev" style="--evc:'+evCor(e.id)+'" title="'+esc(evNome(e)+' · '+fs.map(f=>PHN[f]).join(' + '))+'"><b>'+esc(sigla(e.id))+'</b><i>'+fs.map(f=>FASE_L[f]).join('')+'</i></span>'); });
+    const chips=[], pes=calPes();
+    if(pes) alocDe(pes).filter(a=>alocDias(a).indexOf(k)>=0).forEach(a=>{ const e=evById(a.eventoId); chips.push('<span class="cev ag" style="--evc:'+(e?evCor(e.id):'var(--line-strong)')+'" title="'+esc((e?evNome(e):'SEM EVENTO')+(a.fase?' · '+PHN[a.fase]:'')+(a.hora?' · '+a.hora:'')+(tr(a.funcao)?' · '+normName(a.funcao):''))+'"><b>'+esc(e?sigla(e.id):'?')+'</b><i>'+(a.fase?FASE_L[a.fase]:'')+(a.hora?' '+a.hora:'')+'</i></span>'); });
+    else if(calF().indexOf('ev')>=0) evsM.forEach(e=>{ const fs=fasesDia(e,k); if(fs.length) chips.push('<span class="cev" style="--evc:'+evCor(e.id)+'" title="'+esc(evNome(e)+' · '+fs.map(f=>PHN[f]).join(' + '))+'"><b>'+esc(sigla(e.id))+'</b><i>'+fs.map(f=>FASE_L[f]).join('')+'</i></span>'); });
     const mais=chips.length>3?chips.length-3:0;
-    const cnt=calCntHTML(u);
+    const cnt=pes?'':calCntHTML(u);
     h+='<button type="button" class="cald'+(isWE(k)?' we':'')+(k===t?' today':'')+'" data-dia2="'+k+'" aria-label="'+esc(fmtDL(k))+'"><span class="dn">'+di+'</span>'+chips.slice(0,3).join('')+(mais?'<span class="cmais">+ '+mais+' eventos</span>':'')+(cnt?'<span class="ccnt">'+cnt+'</span>':'')+'</button>'; }
   h+='</div></div></div>';
-  h+='<p class="hint">Na etiqueta do evento: <b>M</b> = montagem · <b>E</b> = dias de evento · <b>D</b> = desmontagem. Embaixo do dia: quantos carregamentos, descarregamentos, empilhadeiras, produtores e equipes'+(calTudo()?' (e carros)':'')+' tem no dia. Use <b>Mostrar</b> pra escolher o que aparece.</p>';
+  if(calPes()) h+='<p class="hint">Cada etiqueta é um evento em que <b>'+esc(pesNomeKey(calPes()))+'</b> está alocado (M montagem · E evento · D desmontagem + hora de chegada). Dia em branco = livre. Volte em <b>Todos</b> pra ver o resto.</p>';
+  else h+='<p class="hint">Na etiqueta do evento: <b>M</b> = montagem · <b>E</b> = dias de evento · <b>D</b> = desmontagem. Embaixo do dia: quantos carregamentos, descarregamentos, empilhadeiras, produtores e equipes'+(calTudo()?' (e carros)':'')+' tem no dia. Use <b>Mostrar</b> pra escolher o que aparece.</p>';
   return h;
 }
 
@@ -1871,9 +1885,10 @@ function diaPanelHTML(){
   const k=PANEL.ctx.d;
   let h=pHead('Calendário · '+DIAS_L[parseISO(k).getDay()],fmtDMY(k),null)+'<div class="p-body">';
   const porEv=new Map(); const put=(eid,g,html)=>{ let o=porEv.get(eid); if(!o){ o={cam:[],eq:[],car:[],eqp:[],prod:[]}; porEv.set(eid,o); } o[g].push(html); };
-  const F=calF(), tudo=calTudo(), fo=x=>F.indexOf(x)>=0;
+  const pes=calPes(), F=pes?['prod','eqp']:calF(), tudo=!pes&&calTudo(), fo=x=>F.indexOf(x)>=0;
   const linha=(cor,nome,txt,id)=>'<div class="prow" style="border-left-color:'+cor+'"><b>'+esc(nome)+'</b><span class="pd">'+esc(txt)+'</span><span class="spacer"></span><button type="button" class="btn sm" data-pit="'+esc(id)+'">Abrir</button></div>';
   trabalho().forEach(it=>{ if(cancelado(it)) return; const ev=evById(it.eventoId); if(it.eventoId&&!evAtivo(ev)) return; const eid=ev?ev.id:'', cor=eid?evCor(eid):'var(--line-strong)';
+    if(pes) return;
     if(it.tipo==='VIAGEM'){ if(tripDias(it).indexOf(k)<0) return; if(!tudo&&!((fo('car')&&it.carData===k)||(fo('des')&&desData(it)===k))) return; const acts=[];
       if(it.carData===k) acts.push('CARREGA'+(it.carHora?' '+it.carHora:'')+' '+localCar(it));
       if(it.saiData===k) acts.push('SAI DO GALPÃO'+(it.saiHora?' '+it.saiHora:''));
@@ -1887,9 +1902,9 @@ function diaPanelHTML(){
       put(eid,'eq',linha(cor,itNome(it),'NO EVENTO'+(i===0?' · CHEGA'+(it.vaiHora?' '+it.vaiHora:''):'')+(i===ds.length-1?' · ÚLTIMO DIA':'')+(tr(it.operador)?' · OPERADOR '+normName(it.operador):''),it.id)); }
     else { if(it.dias.indexOf(k)<0||!tudo) return;
       put(eid,'car',linha(cor,itNome(it),'SAI'+(it.hora?' '+it.hora:'')+(tr(it.saiDe)&&normName(it.saiDe)!=='GALPÃO'?' DE '+normName(it.saiDe):'')+(tr(it.quem)?' · '+normName(it.quem):''),it.id)); } });
-  alocsAtivas().forEach(a=>{ if(alocDias(a).indexOf(k)<0) return; const g=a.grupo==='PROD'?'prod':'eqp'; if(!fo(g)) return; const ev=evById(a.eventoId), eid=ev?ev.id:'';
+  alocsAtivas().forEach(a=>{ if(alocDias(a).indexOf(k)<0) return; if(pes&&alocKey(a)!==pes) return; const g=a.grupo==='PROD'?'prod':'eqp'; if(!fo(g)) return; const ev=evById(a.eventoId), eid=ev?ev.id:'';
     put(eid,g,'<div class="prow" style="border-left-color:'+(eid?evCor(eid):'var(--line-strong)')+'"><b>'+esc(alocNome(a)||'A DEFINIR')+'</b><span class="pd">'+esc([alocTerc(a)?'TERCEIRIZADO'+(alocEmpresa(a)?' · '+alocEmpresa(a):''):'',a.fase?PHN[a.fase]:'',a.hora?'CHEGA '+a.hora:'',normName(a.funcao)].filter(Boolean).join(' · '))+'</span><span class="spacer"></span><button type="button" class="btn sm" data-pal="'+esc(a.id)+'" data-k="'+k+'">Ver</button></div>'); });
-  const evsDia=evsAtivos().filter(e=>fasesDia(e,k).length||porEv.has(e.id)).sort((a,b)=>{ const pa=evPer(a), pb=evPer(b); return (pa?pa.a:'9999')<(pb?pb.a:'9999')?-1:1; });
+  const evsDia=evsAtivos().filter(e=>(!pes&&fo('ev')&&fasesDia(e,k).length)||porEv.has(e.id)).sort((a,b)=>{ const pa=evPer(a), pb=evPer(b); return (pa?pa.a:'9999')<(pb?pb.a:'9999')?-1:1; });
   if(!evsDia.length&&!porEv.has('')) h+='<p class="pempty">Nada nesse dia.</p>';
   evsDia.forEach(e=>{ const fs=fasesDia(e,k), o=porEv.get(e.id)||{cam:[],eq:[],car:[],eqp:[],prod:[]};
     h+='<div class="psec" style="border-left-color:'+evCor(e.id)+'"><h3>'+esc(evNome(e))+'</h3><p class="hint" style="margin:0">'+esc(fs.length?fs.map(f=>PHN[f]).join(' + '):'SEM ETAPA NESSE DIA')+(localCurto(e)?' · '+esc(localCurto(e)):'')+'</p>';
@@ -1901,7 +1916,7 @@ function diaPanelHTML(){
     if(!o.cam.length&&!o.eq.length&&!o.car.length&&!o.prod.length&&!o.eqp.length) h+='<p class="pempty">Nada programado aqui nesse dia.</p>';
     h+='</div>'; });
   const se=porEv.get(''); if(se) h+='<div class="psec"><h3>Sem evento</h3>'+se.cam.concat(se.eq,se.car,se.prod,se.eqp).join('')+'</div>';
-  if(!tudo) h+='<p class="hint">Mostrando só: '+esc(CAL_F.filter(([x])=>fo(x)).map(([,l])=>l).join(', '))+'.</p>';
+  if(pes) h+='<p class="hint">Agenda de '+esc(pesNomeKey(pes))+(porEv.size?'':': livre nesse dia')+'.</p>'; else if(!tudo) h+='<p class="hint">Mostrando só: '+esc(CAL_F.filter(([x])=>fo(x)).map(([,l])=>l).join(', '))+'.</p>';
   return h+'</div>';
 }
 
@@ -2083,6 +2098,9 @@ function onMainClick(e){
     if(a==='wpp-des'){ textoModal('Descarregamentos · texto pro WhatsApp',txtDescarregamentos()); return; }
     if(a==='pdf-des'){ pdfDescarregamentos(); return; }
     if(a==='pdf-cargas'){ pdfCargasModal(); return; }
+    if(a==='pdf-cal'){ pdfCalendario(); return; }
+    if(a==='pdf-esc'){ pdfEscala(act.dataset.g==='PROD'?'PROD':'EQUIPE'); return; }
+    if(a==='pdf-evs'){ pdfEventosLista(); return; }
     if(a==='wpp-sai'){ textoModal('Saídas · texto pro WhatsApp',txtSaidas()); return; }
     if(a==='fro-prev'){ UI.fro.prev=!UI.fro.prev; saveUI(); render(); return; }
     if(a==='add-cam'){ addCaminhao(act.dataset.ev||'',act.dataset.dia||'',act.dataset.local||''); return; }
@@ -2131,6 +2149,8 @@ function setStatus2(id,v){ const it=itens.find(x=>x.id===id); if(!it) return; if
 function onMainChange(e){
   const t=e.target;
   if(t.matches('select.stsel[data-st]')){ const id=t.dataset.st, v=t.value; t.blur(); setStatus2(id,v); return; }
+  if(t.matches('select[data-cpes]')){ UI.cal.pes=t.value; t.blur(); render(); if(PANEL.open&&PANEL.mode==='dia') renderPanel(true); return; }
+  if(t.matches('select[data-gpes]')){ uiG(t.dataset.gpes).pes=t.value; t.blur(); render(); return; }
   if(t.matches('select[data-fev]')){ const P=uiP(t.dataset.fev); P.ev=t.value; t.blur(); render(); return; }
   if(t.closest('[data-row]')){ if(t.dataset.pick) pickRow(t); else if(t.dataset.f) commitRow(t); }
 }
@@ -2152,8 +2172,9 @@ function lerValor(el,it){ const kind=el.dataset.kind; let v=el.type==='checkbox'
   return {v:v}; }
 function patchSentido(it,v){ const p={sentido:v,carLocal:it.carLocal==='OUTRO'?'OUTRO':(v==='TRAZ'?'EVENTO':'GALPÃO')}; if(stList(Object.assign({},it,{sentido:v})).indexOf(it.status)<0) p.status='PROGRAMADO'; if(it.link&&it.link.k==='frete') p.link=undefined; return p; }
 function patchCampo(it,k,v){ if(it.tipo==='ALOC') return patchAloc(it,k,v); if(k==='sentido') return patchSentido(it,v);
+  if(k==='desEvId'&&v===it.eventoId) return {desEvId:''};
   if(k==='desOnde'){ const s2=v==='EVENTO'?'LEVA':'TRAZ'; if(it.sentido===s2) return {}; const d=desData(it), hh=desHora(it), p=patchSentido(it,s2);
-    if(s2==='TRAZ'){ p.volData=d; p.volHora=hh; p.cheData=''; p.cheHora=''; } else { p.cheData=d; p.cheHora=hh; p.volData=''; p.volHora=''; } return p; }
+    if(s2==='TRAZ'){ p.volData=d; p.volHora=hh; p.cheData=''; p.cheHora=''; p.desEvId=''; } else { p.cheData=d; p.cheHora=hh; p.volData=''; p.volHora=''; } return p; }
   const p={[k]:v}; if(k==='eventoId'&&it.link) p.link=undefined; return p; }
 function cancelaArea(id,k){ const kk=id+'|'+k; clearTimeout(AREA.get(kk)); AREA.delete(kk); }
 function commitRow(el){
@@ -2272,7 +2293,7 @@ function txtDescarregamentos(){ const per=periodo(UI.car), l=descarregamentosLis
   const linhas=(lbl,v)=>tr(v)?lbl+normArea(v).split('\n').join('\n   ')+'\n':'';
   by.forEach((arr0,d)=>{ s+='*DESCARREGAMENTOS · '+fmtDL(d)+'*\n'; grupos(arr0,GRP_DES).forEach(([k,lbl,arr])=>{ s+='\n_*— '+lbl+' —*_\n'; arr.forEach(it=>{ const gal=desNoGalpao(it);
     s+='\n*'+(desHora(it)||'SEM HORA')+'* · '+itNome(it)+(tr(it.motorista)?' · MOT. '+normName(it.motorista):'')+'\n'
-      +(gal?'NO GALPÃO (VEIO DO '+evNomeIt(it)+')':'NO EVENTO '+evNomeIt(it))+'\n'
+      +(gal?'NO GALPÃO (VEIO DO '+evNomeIt(it)+')':'NO EVENTO '+desEvTxt(it)+(desOutroEv(it)?' (VEM DO '+evNomeIt(it)+')':''))+'\n'
       +linhas('DESCARREGA: ',desCarga(it))+linhas('OBS: ',it.obs); }); }); s+='\n'; });
   return s.trim(); }
 function pdfCargasModal(){
@@ -2363,7 +2384,7 @@ function pdfTabCar(P,arr){
 }
 function pdfTabDes(P,arr){
   pdfTabela(P,[{h:'HORA',w:12,b:true,fs:9},{h:'ONDE',w:22,b:true,fs:7.4},{h:'CAMINHÃO / MOTORISTA',w:46,b:true},{h:'EVENTO',w:46,b:true},{h:'O QUE DESCARREGA',w:80},{h:'OBS',w:36,fs:7.2},{h:'SITUAÇÃO',w:10,fs:7}],
-    arr.map(it=>({c:[desHora(it)||'--:--',desNoGalpao(it)?'NO GALPÃO':'NO EVENTO',itNome(it)+(tr(it.motorista)?'\nMOT. '+normName(it.motorista):''),evNomeIt(it)+(desNoGalpao(it)?'\n(VEIO DE LÁ)':''),pdfArea(desCarga(it)),pdfArea(it.obs),it.status],mark:it.eventoId?hex(evCor(it.eventoId)):C.line,cancel:cancelado(it)})));
+    arr.map(it=>({c:[desHora(it)||'--:--',desNoGalpao(it)?'NO GALPÃO':'NO EVENTO',itNome(it)+(tr(it.motorista)?'\nMOT. '+normName(it.motorista):''),(desNoGalpao(it)?evNomeIt(it)+'\n(VEIO DE LÁ)':desEvTxt(it)+(desOutroEv(it)?'\n(VEM DO '+evNomeIt(it)+')':'')),pdfArea(desCarga(it)),pdfArea(it.obs),it.status],mark:it.eventoId?hex(evCor(it.eventoId)):C.line,cancel:cancelado(it)})));
 }
 function pdfSemCar(P){ const sem=semCarregamento(UI.car); if(!sem.length) return;
   pdfBarra(P,'CAMINHÕES SEM DIA DE CARREGAMENTO',plural(sem.length,'CAMINHÃO','CAMINHÕES'),C.warn);
@@ -2774,14 +2795,15 @@ function segCadG(g){ const P=uiG(g); return '<div class="seg" role="group" aria-
 function escalaHTML(g){
   const I=G_INFO[g], P=uiG(g), ro=readOnly;
   if(P.cad) return pessoasCadHTML(g);
-  const per=periodo(P), lista=alocsAtivas(g).filter(a=>!P.ev||a.eventoId===P.ev);
+  const pes=P.pes&&pesNomeKey(P.pes)?P.pes:'';
+  const per=periodo(P), lista=alocsAtivas(g).filter(a=>(!P.ev||a.eventoId===P.ev)&&(!pes||alocKey(a)===pes));
   const M=new Map(); lista.forEach(a=>{ const k=alocKey(a); if(!k) return; let m=M.get(k); if(!m){ m=new Map(); M.set(k,m); } alocDias(a).forEach(d=>{ if(d<per.a||d>per.b) return; let l=m.get(d); if(!l){ l=[]; m.set(d,l); } l.push(a); }); });
   const nav=pnavHTML(I.key,per,k=>lista.filter(a=>alocDias(a).indexOf(k)>=0).length);
-  let h='<div class="toolbar">'+segCadG(g)+nav.nav+'<span class="spacer"></span>'+(ro?'':'<button type="button" class="btn primary" data-act="aloc-add" data-g="'+g+'">+ Alocar '+esc(I.um)+'</button>')+'</div>'
-    +'<div class="toolbar sub">'+evSelHTML(I.key,P.ev)+'<span class="lbl">Clique no quadrinho vazio pra alocar · no colorido pra editar</span></div>'+nav.semana;
+  let h='<div class="toolbar">'+segCadG(g)+nav.nav+'<span class="spacer"></span>'+'<button type="button" class="btn" data-act="pdf-esc" data-g="'+g+'">PDF da escala</button>'+(ro?'':'<button type="button" class="btn primary" data-act="aloc-add" data-g="'+g+'">+ Alocar '+esc(I.um)+'</button>')+'</div>'
+    +'<div class="toolbar sub">'+evSelHTML(I.key,P.ev)+pesSelHTML('data-gpes="'+g+'"',pes,[g])+'<span class="lbl">Clique no quadrinho vazio pra alocar · no colorido pra editar</span></div>'+nav.semana;
   const ds=diasEntre(per.a,per.b), t=hoje(), ps=pessoas(g);
   const rows=[]; const vistos=new Set();
-  [['NOSSOS',ps.filter(p=>p.vinculo!=='TERCEIRO')],['TERCEIRIZADOS',ps.filter(p=>p.vinculo==='TERCEIRO')]].forEach(([tt,l])=>{ if(!l.length) return; rows.push({grp:tt}); l.forEach(p=>{ rows.push({key:'p:'+p.id,nm:normName(p.nome)||'(SEM NOME)',sub:pessoaSub(p),pid:p.id}); vistos.add('p:'+p.id); }); });
+  [['NOSSOS',ps.filter(p=>p.vinculo!=='TERCEIRO'&&(!pes||pes==='p:'+p.id))],['TERCEIRIZADOS',ps.filter(p=>p.vinculo==='TERCEIRO'&&(!pes||pes==='p:'+p.id))]].forEach(([tt,l])=>{ if(!l.length) return; rows.push({grp:tt}); l.forEach(p=>{ rows.push({key:'p:'+p.id,nm:normName(p.nome)||'(SEM NOME)',sub:pessoaSub(p),pid:p.id}); vistos.add('p:'+p.id); }); });
   const dig=[]; M.forEach((m,k)=>{ if(vistos.has(k)||!m.size) return; const a0=m.values().next().value[0]; dig.push({key:k,nm:alocNome(a0),sub:'TERCEIRIZADO'+(alocEmpresa(a0)?' · '+alocEmpresa(a0):'')+' · DIGITADO'}); });
   if(dig.length){ rows.push({grp:'TERCEIRIZADOS DIGITADOS'}); dig.forEach(r=>rows.push(r)); }
   if(!rows.length) h+='<div class="emptymsg">Ninguém cadastrado e nada alocado '+perQual(per)+'. Cadastre '+(g==='PROD'?'os produtores':'as equipes')+' em <button type="button" class="btn sm" data-gcad="'+g+'" data-v="1">Cadastro</button>'+(ro?'':' ou clique em <b>+ Alocar '+esc(I.um)+'</b>.')+'</div>';
@@ -2833,7 +2855,7 @@ function pessoasCadHTML(g){
   return h;
 }
 /* calendário: o que mostrar */
-const CAL_F=[['car','Carregamentos'],['des','Descarregamentos'],['emp','Empilhadeiras'],['prod','Produção'],['eqp','Equipes']];
+const CAL_F=[['ev','Eventos'],['car','Carregamentos'],['des','Descarregamentos'],['emp','Empilhadeiras'],['prod','Produção'],['eqp','Equipes']];
 function calF(){ const f=isObj(UI.cal.f)?UI.cal.f:{}; const on=CAL_F.filter(([k])=>f[k]).map(([k])=>k); return on.length?on:CAL_F.map(([k])=>k); }
 const calTudo=()=>calF().length===CAL_F.length;
 function calFiltroHTML(){ const on=calF(), tudo=calTudo(); return '<div class="seg calf" role="group" aria-label="O que ver no calendário"><button type="button" data-calf="" class="'+(tudo?'on':'')+'" aria-pressed="'+tudo+'">Tudo</button>'+CAL_F.map(([k,l])=>{ const o=!tudo&&on.indexOf(k)>=0; return '<button type="button" data-calf="'+k+'" class="'+(o?'on':'')+'" aria-pressed="'+o+'">'+l+'</button>'; }).join('')+'</div>'; }
@@ -2848,7 +2870,96 @@ function calContagem(a,b){
   return M;
 }
 const CAL_TXT={car:['CARREG.','CARREG.'],des:['DESCARREG.','DESCARREG.'],emp:['EMPILH.','EMPILH.'],prod:['PRODUTOR','PRODUTORES'],eqp:['EQUIPE','EQUIPES'],carro:['CARRO','CARROS']};
-function calCntHTML(u){ if(!u) return ''; const ks=calF().concat(calTudo()?['carro']:[]); return ks.filter(k=>u[k].size).map(k=>'<span class="cc cc-'+k+'">'+u[k].size+' '+CAL_TXT[k][u[k].size>1?1:0]+'</span>').join(''); }
+function calCntHTML(u){ if(!u) return ''; const ks=calF().filter(k=>k!=='ev').concat(calTudo()?['carro']:[]); return ks.filter(k=>u[k].size).map(k=>'<span class="cc cc-'+k+'">'+u[k].size+' '+CAL_TXT[k][u[k].size>1?1:0]+'</span>').join(''); }
+
+/* ---------- filtro por equipe / produtor ---------- */
+function pesLista(g){ const out=pessoas(g).map(p=>({key:'p:'+p.id,nome:normName(p.nome)||'(SEM NOME)',g:g})); const vis=new Set(out.map(o=>o.key)); alocsAtivas(g).forEach(a=>{ const k=alocKey(a); if(k&&!vis.has(k)){ vis.add(k); out.push({key:k,nome:alocNome(a)+' (TERCEIRIZADO)',g:g}); } }); return out; }
+function pesNomeKey(k){ for(const g of ['EQUIPE','PROD']){ const o=pesLista(g).find(x=>x.key===k); if(o) return o.nome; } return ''; }
+function pesSelHTML(attr,val,gs){ return '<label class="sel">'+(gs.length>1?'Equipe / produtor':G_INFO[gs[0]].Um)+' <select '+attr+'><option value="">Todos</option>'+gs.map(g=>{ const l=pesLista(g); return l.length?'<optgroup label="'+(g==='PROD'?'PRODUÇÃO':'EQUIPES')+'">'+l.map(o=>'<option value="'+esc(o.key)+'"'+(o.key===val?' selected':'')+'>'+esc(o.nome)+'</option>').join('')+'</optgroup>':''; }).join('')+'</select></label>'; }
+const calPes=()=>UI.cal.pes&&pesNomeKey(UI.cal.pes)?UI.cal.pes:'';
+const alocDe=k=>alocsAtivas().filter(a=>alocKey(a)===k);
+function alocDiasTxt(a){ return a.de?(a.ate&&a.ate!==a.de?fmtD(a.de)+' A '+fmtD(a.ate):fmtD(a.de)):'SEM DIA'; }
+
+/* ---------- PDF: relatório do calendário (o mês, com o que está filtrado) ---------- */
+async function pdfCalendario(){
+  let P; try{ P=await pdfNovo('landscape'); }catch(e){ toast('Não consegui carregar o gerador de PDF (internet?).',true); return; }
+  const m=calMes(), Y=+m.slice(0,4), Mo=+m.slice(5,7), nD=new Date(Y,Mo,0).getDate(), prim=m+'-01', fim=m+'-'+pad2(nD), mt=MESES_L[Mo-1]+' '+Y, pes=calPes();
+  if(pes){
+    const nm=pesNomeKey(pes), l=ordAloc(alocDe(pes).filter(a=>alocDias(a).some(d=>d>=prim&&d<=fim)));
+    const dias=new Set(); l.forEach(a=>alocDias(a).forEach(d=>{ if(d>=prim&&d<=fim) dias.add(d); }));
+    pdfCab(P,'AGENDA · '+nm,'MÊS DE '+mt,plural(dias.size,'DIA OCUPADO','DIAS OCUPADOS')+' DE '+nD);
+    if(!l.length){ P.font('bold',11); P.tc(C.muted); P.T('NADA ALOCADO NESSE MÊS.',P.M,P.y+4); }
+    else pdfTabela(P,[{h:'DIAS',w:34,b:true},{h:'EVENTO',w:58,b:true},{h:'LOCAL',w:62,mut:true,fs:7.2},{h:'ETAPA',w:26},{h:'HORA',w:14},{h:'O QUE FAZ',w:40}],
+      l.map(a=>{ const e=evById(a.eventoId); return {c:[alocDiasTxt(a),e?evNome(e):'SEM EVENTO',e?normName(e.local)||'-':'-',a.fase?PHN[a.fase]:'-',a.hora||'-',normName(a.funcao)||'-'],mark:e?hex(evCor(e.id)):C.line}; }));
+    pdfRodape(P,'AGENDA · '+nm+' · '+mt);
+    abrirPDF('AGENDA_'+pdfSafe(nm).replace(/[^A-Z0-9]+/g,'-').slice(0,40)+'_'+m.replace('-','')+'.pdf',P.doc.output('arraybuffer'));
+    return;
+  }
+  const F=calF(), fo=x=>F.indexOf(x)>=0, tudo=calTudo();
+  pdfCab(P,'CALENDÁRIO · '+mt,tudo?'TUDO':'MOSTRANDO: '+CAL_F.filter(([x])=>fo(x)).map(([,l])=>l).join(', '),'');
+  let algum=false;
+  diasEntre(prim,fim).forEach(d=>{
+    const rows=[];
+    if(fo('ev')) evsAtivos().forEach(e=>{ const fs=fasesDia(e,d); if(fs.length) rows.push({o:'0',c:['','EVENTO',evNome(e),fs.map(f=>({mont:'EM MONTAGEM',ev:'DIA DE EVENTO',desm:'EM DESMONTAGEM'})[f]).join(' + '),normName(e.local)||'-'],mark:hex(evCor(e.id))}); });
+    trabalho().forEach(it=>{ if(cancelado(it)) return; const e=evById(it.eventoId); if(it.eventoId&&!evAtivo(e)) return; const en=e?evNome(e):'SEM EVENTO', mk=e?hex(evCor(e.id)):C.line;
+      if(it.tipo==='VIAGEM'){
+        if(fo('car')&&it.carData===d) rows.push({o:'1'+(it.carHora||'99'),c:[it.carHora||'-','CARREGAMENTO',en,truckNome(it)+(tr(it.motorista)?'\nMOT. '+normName(it.motorista):''),'CARREGA '+localCar(it)+(tr(it.destino)?' · DESTINO '+normName(it.destino):'')],mark:mk});
+        if(fo('des')&&desData(it)===d){ const gal=desNoGalpao(it), hh=gal?it.volHora:it.cheHora; rows.push({o:'2'+(hh||'99'),c:[hh||'-','DESCARREGAMENTO',en,truckNome(it),(gal?'NO GALPÃO':'NO EVENTO')+(desCarga(it)?' · '+desCarga(it).replace(/\n/g,' / '):'')],mark:mk}); }
+      } else if(it.tipo==='EQUIP'){ if(fo('emp')&&eqDias(it).indexOf(d)>=0) rows.push({o:'3',c:['','EMPILHADEIRA',en,itNome(it),tr(it.motorista)?'OPERADOR '+normName(it.motorista):'-'],mark:mk}); }
+      else if(tudo&&it.dias.indexOf(d)>=0) rows.push({o:'6',c:[it.hora||'-','CARRO',en,itNome(it)+(tr(it.motorista)?'\nMOT. '+normName(it.motorista):''),normArea(it.leva)||'-'],mark:mk}); });
+    alocsAtivas().forEach(a=>{ if(alocDias(a).indexOf(d)<0) return; const g=a.grupo==='PROD'?'prod':'eqp'; if(!fo(g)) return; const e=evById(a.eventoId);
+      rows.push({o:(g==='prod'?'4':'5')+(a.hora||'99'),c:[a.hora||'-',g==='prod'?'PRODUTOR':'EQUIPE',e?evNome(e):'SEM EVENTO',alocNome(a)+(alocTerc(a)?' (TERCEIRIZADO'+(alocEmpresa(a)?' · '+alocEmpresa(a):'')+')':''),[a.fase?PHN[a.fase]:'',normName(a.funcao)].filter(Boolean).join(' · ')||'-'],mark:e?hex(evCor(e.id)):C.line}); });
+    if(!rows.length) return; algum=true;
+    rows.sort((x,y)=>x.o<y.o?-1:x.o>y.o?1:0);
+    P.ensure(30); pdfBarra(P,fmtDL(d),plural(rows.length,'ITEM','ITENS'));
+    pdfTabela(P,[{h:'HORA',w:13,b:true,fs:8.6},{h:'O QUE',w:32,b:true,fs:7.2},{h:'EVENTO',w:62,b:true},{h:'QUEM / QUAL',w:72},{h:'DETALHE',w:40,mut:true,fs:7.4}],rows);
+  });
+  if(!algum){ P.font('bold',11); P.tc(C.muted); P.T('NADA NESSE MÊS COM ESSE FILTRO.',P.M,P.y+4); }
+  pdfRodape(P,'CALENDÁRIO · '+mt);
+  abrirPDF('CALENDARIO_'+m.replace('-','')+'.pdf',P.doc.output('arraybuffer'));
+}
+
+/* ---------- PDF: escala das equipes / da produção ---------- */
+async function pdfEscala(g){
+  let P; try{ P=await pdfNovo('landscape'); }catch(e){ toast('Não consegui carregar o gerador de PDF (internet?).',true); return; }
+  const I=G_INFO[g], U=uiG(g), per=periodo(U), pes=U.pes&&pesNomeKey(U.pes)?U.pes:'';
+  const lista=alocsAtivas(g).filter(a=>(!U.ev||a.eventoId===U.ev)&&(!pes||alocKey(a)===pes)&&alocDias(a).some(d=>d>=per.a&&d<=per.b));
+  pdfCab(P,'ESCALA '+(g==='PROD'?'DA PRODUÇÃO':'DAS EQUIPES'),perTxt(per),[filtroEvTxt(U.ev),pes?'SÓ '+pesNomeKey(pes):''].filter(Boolean).join(' · '));
+  if(!lista.length){ P.font('bold',11); P.tc(C.muted); P.T('NINGUÉM ALOCADO NESSE PERÍODO.',P.M,P.y+4); pdfRodape(P,'ESCALA · '+perTxt(per)); abrirPDF(pdfNome('ESCALA-'+I.uns.toUpperCase(),per),P.doc.output('arraybuffer')); return; }
+  const by=new Map(); lista.forEach(a=>{ const k=alocKey(a)||a.id; if(!by.has(k)) by.set(k,[]); by.get(k).push(a); });
+  const ordem=pesLista(g).map(o=>o.key).filter(k=>by.has(k)).concat(Array.from(by.keys()).filter(k=>!pesLista(g).some(o=>o.key===k)));
+  const nomeK=k=>{ const a=by.get(k)[0], p=pessoa(a.pessoaId); return alocNome(a)+(p?(p.vinculo==='TERCEIRO'?' (TERCEIRIZADO'+(tr(p.empresa)?' · '+normName(p.empresa):'')+')':''):' (TERCEIRIZADO'+(alocEmpresa(a)?' · '+alocEmpresa(a):'')+')'); };
+  /* quadro: dia e semana (no mês fica só a lista, não cabe na folha) */
+  if(per.modo!=='mes'){
+    const ds=diasEntre(per.a,per.b), wN=ds.length>1?Math.floor((P.CW-58)/ds.length):P.CW-58;
+    pdfSub(P,'QUADRO',plural(ordem.length,I.um.toUpperCase(),I.uns.toUpperCase()));
+    pdfTabela(P,[{h:I.Um.toUpperCase(),w:58,b:true,fs:7.6}].concat(ds.map(d=>({h:DIAS3[parseISO(d).getDay()]+' '+fmtDM(d),w:wN,fs:7}))),
+      ordem.map(k=>({c:[nomeK(k)].concat(ds.map(d=>by.get(k).filter(a=>alocDias(a).indexOf(d)>=0).map(a=>{ const e=evById(a.eventoId); return (e?sigla(e.id):'?')+(a.fase?' '+FASE_L[a.fase]:'')+(a.hora?' '+a.hora:''); }).join('\n')||'-'))})));
+    const evs=Array.from(new Set(lista.map(a=>a.eventoId).filter(Boolean)));
+    if(evs.length){ P.font('normal',7.4); P.tc(C.muted); const txt=evs.map(id=>sigla(id)+' = '+evNome(evById(id))).join('   ·   ')+'   ·   M MONTAGEM · E EVENTO · D DESMONTAGEM'; P.wrap(txt,P.CW).forEach(l=>{ P.ensure(5); P.T(l,P.M,P.y); P.y+=3.6; }); P.y+=4; }
+  }
+  pdfSub(P,'DETALHE POR '+I.um.toUpperCase(),'');
+  ordem.forEach(k=>{ const l=ordAloc(by.get(k)); P.ensure(30); pdfBarra(P,nomeK(k),plural(l.length,'ALOCAÇÃO','ALOCAÇÕES'));
+    pdfTabela(P,[{h:'DIAS',w:34,b:true},{h:'EVENTO',w:58,b:true},{h:'LOCAL',w:62,mut:true,fs:7.2},{h:'ETAPA',w:26},{h:'HORA',w:14},{h:'O QUE FAZ',w:40}],
+      l.map(a=>{ const e=evById(a.eventoId); return {c:[alocDiasTxt(a),e?evNome(e):'SEM EVENTO',e?normName(e.local)||'-':'-',a.fase?PHN[a.fase]:'-',a.hora||'-',normName(a.funcao)||'-'],mark:e?hex(evCor(e.id)):C.line}; })); });
+  pdfRodape(P,'ESCALA '+(g==='PROD'?'DA PRODUÇÃO':'DAS EQUIPES')+' · '+perTxt(per));
+  abrirPDF(pdfNome('ESCALA-'+(g==='PROD'?'PRODUCAO':'EQUIPES'),per),P.doc.output('arraybuffer'));
+}
+
+/* ---------- PDF: lista de eventos (o que está na tela) ---------- */
+async function pdfEventosLista(){
+  let P; try{ P=await pdfNovo('landscape'); }catch(e){ toast('Não consegui carregar o gerador de PDF (internet?).',true); return; }
+  const G=gruposEventos(), filt={proximos:'AGORA E PRÓXIMOS',todos:'TODOS',arquivados:'ARQUIVADOS'}[UI.evf]||'';
+  pdfCab(P,'RELATÓRIO DE EVENTOS',filt+(UI.q?' · BUSCA "'+UI.q+'"':''),plural(G.reduce((s,g)=>s+g[1].length,0),'EVENTO','EVENTOS'));
+  const jt=(e,f)=>janelas(e,f).map(j=>j.a===j.b?fmtDM(j.a):fmtDM(j.a)+' A '+fmtDM(j.b)).join('\n')||'-';
+  G.forEach(([tit,l])=>{ if(!l.length) return; pdfBarra(P,tit,plural(l.length,'EVENTO','EVENTOS'));
+    pdfTabela(P,[{h:'EVENTO',w:56,b:true},{h:'LOCAL',w:58,mut:true,fs:7.2},{h:'MONTAGEM',w:24},{h:'EVENTO',w:24},{h:'DESMONTAGEM',w:24},{h:'CAMINHÕES',w:20},{h:'EMPILH.',w:15},{h:'EQUIPES',w:28},{h:'PRODUÇÃO',w:28}],
+      l.map(e=>{ const its=itens.filter(x=>ehTrab(x)&&x.eventoId===e.id&&!cancelado(x)), al=itens.filter(x=>x.tipo==='ALOC'&&x.eventoId===e.id);
+        const nm=gr=>al.filter(a=>a.grupo===gr).map(a=>alocNome(a)).filter(Boolean); const uq=a=>Array.from(new Set(a));
+        return {c:[evNome(e)+(tr(e.contato)?'\n'+normName(e.contato):''),normName(e.local)||'-',jt(e,'mont'),jt(e,'ev'),jt(e,'desm'),String(its.filter(x=>x.tipo==='VIAGEM').length),String(its.filter(x=>x.tipo==='EQUIP').length),uq(nm('EQUIPE')).join('\n')||'-',uq(nm('PROD')).join('\n')||'-'],mark:hex(evCor(e.id))}; })); });
+  pdfRodape(P,'EVENTOS');
+  abrirPDF('EVENTOS_'+hoje().replace(/-/g,'')+'.pdf',P.doc.output('arraybuffer'));
+}
 
 init();
 
