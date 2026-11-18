@@ -862,7 +862,7 @@ const UI=(()=>{ const s=lsGet(LSK.ui)||{}, o=jclone(UI0);
   if(isObj(s.fro)){ o.fro.prev=s.fro.prev!==false; o.fro.cad=!!s.fro.cad; }
   ['prod','eqp'].forEach(k=>{ if(isObj(s[k])){ if(['dia','semana','mes'].indexOf(s[k].modo)>=0) o[k].modo=s[k].modo; o[k].cad=!!s[k].cad; } });
   if(isObj(s.cal)&&isObj(s.cal.f)) o.cal.f=s.cal.f;
-  if(isObj(s.cal)&&['mont','ev','desm'].indexOf(s.cal.fase)>=0) o.cal.fase=s.cal.fase;
+  if(isObj(s.cal)&&(Array.isArray(s.cal.fase)||typeof s.cal.fase==='string')) o.cal.fase=s.cal.fase;
   return o; })();
 function saveUI(){ lsSet(LSK.ui,{evf:UI.evf,car:{modo:UI.car.modo,vista:UI.car.vista},sai:{modo:UI.sai.modo,tipos:UI.sai.tipos},fro:{prev:UI.fro.prev,cad:UI.fro.cad},prod:{modo:UI.prod.modo,cad:UI.prod.cad},eqp:{modo:UI.eqp.modo,cad:UI.eqp.cad},cal:{f:UI.cal.f||{},fase:calFase()}}); }
 const uiP=k=>({car:UI.car,sai:UI.sai,prod:UI.prod,eqp:UI.eqp})[k]||UI.car;
@@ -1733,9 +1733,11 @@ function semSaidaHTML(P){ if(!P.tipos.CAMINHAO) return ''; const t=hoje(); const
 function calMes(){ return /^\d{4}-\d{2}$/.test(UI.cal.mes)?UI.cal.mes:hoje().slice(0,7); }
 function fasesDia(ev,k){ return ['mont','ev','desm'].filter(f=>janelas(ev,f).some(x=>k>=x.a&&k<=x.b)); }
 /* calendário: ver só montagem / só evento / só desmontagem */
-const calFase=()=>['mont','ev','desm'].indexOf(UI.cal.fase)>=0?UI.cal.fase:'';
-function fasesCal(ev,k){ const f=calFase(), fs=fasesDia(ev,k); return f?fs.filter(x=>x===f):fs; }
-function calFaseHTML(){ const f=calFase(); return '<div class="seg calfase" role="group" aria-label="Etapa dos eventos"><span class="segl">Etapa</span>'+[['','Todas'],['mont','Montagem'],['ev','Evento'],['desm','Desmontagem']].map(([v,l])=>'<button type="button" data-calfase="'+v+'" class="'+(f===v?'on':'')+'" aria-pressed="'+(f===v)+'">'+l+'</button>').join('')+'</div>'; }
+/* pode marcar mais de uma (ex.: montagem + desmontagem); nenhuma = todas */
+function calFase(){ const v=UI.cal.fase, a=(Array.isArray(v)?v:typeof v==='string'&&v?[v]:[]).filter(x=>['mont','ev','desm'].indexOf(x)>=0); return a.length===3?[]:a; }
+function fasesCal(ev,k){ const f=calFase(), fs=fasesDia(ev,k); return f.length?fs.filter(x=>f.indexOf(x)>=0):fs; }
+function calFaseClick(v){ if(!v){ UI.cal.fase=[]; return; } const a=calFase(), i=a.indexOf(v); if(i>=0) a.splice(i,1); else a.push(v); UI.cal.fase=a.length===3?[]:a; }
+function calFaseHTML(){ const f=calFase(); return '<div class="seg calfase" role="group" aria-label="Etapa dos eventos (pode marcar mais de uma)"><span class="segl">Etapa</span>'+[['','Todas'],['mont','Montagem'],['ev','Evento'],['desm','Desmontagem']].map(([v,l])=>{ const on=v?f.indexOf(v)>=0:!f.length; return '<button type="button" data-calfase="'+v+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'">'+l+'</button>'; }).join('')+'</div>'; }
 const FASE_L={mont:'M',ev:'E',desm:'D'};
 function usoCalendario(a,b){
   const M=new Map(); const add=(d,g,id)=>{ if(!d||d<a||d>b) return; let o=M.get(d); if(!o){ o={cam:new Set(),eq:new Set(),car:new Set()}; M.set(d,o); } o[g].add(id); };
@@ -2154,7 +2156,7 @@ function onMainClick(e){
   const fg=t.closest('[data-folga]'); if(fg){ if(readOnly) return; folgaToggle(fg.dataset.g,fg.dataset.folga,fg.dataset.k); render(); return; }
   const al=t.closest('[data-aloc]'); if(al){ FOCO={id:al.dataset.aloc,sel:'[data-f="funcao"]'}; drawMain(true); return; }
   const an=t.closest('[data-anew]'); if(an){ if(readOnly) return; const g=an.dataset.g, P=uiG(g); const o=criarAloc(g,{pessoaId:an.dataset.anew,nome:normName((pessoa(an.dataset.anew)||{}).nome),eventoId:P.ev||'',de:an.dataset.k,ate:an.dataset.k}); FOCO={id:o.id,sel:P.ev?'[data-f="fase"]':'select[data-f="eventoId"]'}; render(); return; }
-  const cfa=t.closest('[data-calfase]'); if(cfa){ UI.cal.fase=cfa.dataset.calfase; saveUI(); render(); if(PANEL.open&&PANEL.mode==='dia') renderPanel(true); return; }
+  const cfa=t.closest('[data-calfase]'); if(cfa){ calFaseClick(cfa.dataset.calfase); saveUI(); render(); if(PANEL.open&&PANEL.mode==='dia') renderPanel(true); return; }
   const cf=t.closest('[data-calf]'); if(cf){ calClick(cf.dataset.calf); saveUI(); render(); if(PANEL.open&&PANEL.mode==='dia') renderPanel(true); return; }
   const fm=t.closest('[data-fm]'); if(fm){ UI.fro.cad=fm.dataset.fm==='1'; ROWDEL=null; saveUI(); render(); return; }
   const pn=t.closest('[data-pn]'); if(pn){ goPeriodo(pn.dataset.pn,+pn.dataset.d); return; }
@@ -2984,7 +2986,7 @@ async function pdfCalendario(){
     return;
   }
   const F=calF(), fo=x=>F.indexOf(x)>=0, tudo=calTudo();
-  const fz=calFase()&&fo('ev')?' · EVENTOS SÓ EM '+{mont:'MONTAGEM',ev:'DIA DE EVENTO',desm:'DESMONTAGEM'}[calFase()]:'';
+  const fz=calFase().length&&fo('ev')?' · EVENTOS SÓ EM '+['mont','ev','desm'].filter(x=>calFase().indexOf(x)>=0).map(x=>({mont:'MONTAGEM',ev:'DIA DE EVENTO',desm:'DESMONTAGEM'})[x]).join(' + '):'';
   pdfCab(P,'CALENDÁRIO · '+mt,(tudo?'TUDO':'MOSTRANDO: '+CAL_F.filter(([x])=>fo(x)).map(([,l])=>l).join(', '))+fz,'');
   let algum=false;
   diasEntre(prim,fim).forEach(d=>{
