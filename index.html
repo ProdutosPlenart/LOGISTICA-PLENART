@@ -703,6 +703,23 @@ body.pv-open,body.login-open,body.p-open{overflow:hidden}
 .seg.calfase .segl{align-self:center;padding:0 8px 0 4px;font:700 10.5px/1 var(--cond);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .toolbar.sub .seg.calfase{margin-left:6px}
 
+/* mapa de dias dos eventos */
+.fq.evmapa td.d[data-dia2]{cursor:pointer}
+.fq.evmapa td.d[data-dia2]:hover{background:var(--blue-soft)}
+.fq.evmapa .fc.ph-mont{opacity:.86}
+.fq.evmapa .fc.ph-desm{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--evc) 22%,var(--surface)) 0 4px,color-mix(in srgb,var(--evc) 12%,var(--surface)) 4px 8px)}
+.fq.evmapa td.nm b{display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fq.evmapa .evdot{flex:0 0 9px;width:9px;height:9px;border-radius:2px;background:var(--evc)}
+.fq.evmapa tfoot tr.tot td{background:var(--surface-2);height:26px}
+.fq.evmapa tfoot tr.tot:first-child td{border-top:2px solid var(--line-strong)}
+.fq.evmapa tfoot td.nm b{font-size:11px;letter-spacing:.06em}
+.fq.evmapa .tn{font:700 12px/1 var(--cond)}
+.seg.calvis{margin-left:10px}
+.fq.evmapa{table-layout:fixed}
+.fq.evmapa td.d,.fq.evmapa thead th:not(.nm){width:34px;min-width:34px;max-width:34px}
+.fq.evmapa .fc{min-height:32px;font:700 14px/1 var(--cond)}
+.fq.evmapa td.d{height:36px}
+
 </style>
 </head>
 <body>
@@ -863,8 +880,9 @@ const UI=(()=>{ const s=lsGet(LSK.ui)||{}, o=jclone(UI0);
   ['prod','eqp'].forEach(k=>{ if(isObj(s[k])){ if(['dia','semana','mes'].indexOf(s[k].modo)>=0) o[k].modo=s[k].modo; o[k].cad=!!s[k].cad; } });
   if(isObj(s.cal)&&isObj(s.cal.f)) o.cal.f=s.cal.f;
   if(isObj(s.cal)&&(Array.isArray(s.cal.fase)||typeof s.cal.fase==='string')) o.cal.fase=s.cal.fase;
+  if(isObj(s.cal)&&s.cal.vis==='mapa') o.cal.vis='mapa';
   return o; })();
-function saveUI(){ lsSet(LSK.ui,{evf:UI.evf,car:{modo:UI.car.modo,vista:UI.car.vista},sai:{modo:UI.sai.modo,tipos:UI.sai.tipos},fro:{prev:UI.fro.prev,cad:UI.fro.cad},prod:{modo:UI.prod.modo,cad:UI.prod.cad},eqp:{modo:UI.eqp.modo,cad:UI.eqp.cad},cal:{f:UI.cal.f||{},fase:calFase()}}); }
+function saveUI(){ lsSet(LSK.ui,{evf:UI.evf,car:{modo:UI.car.modo,vista:UI.car.vista},sai:{modo:UI.sai.modo,tipos:UI.sai.tipos},fro:{prev:UI.fro.prev,cad:UI.fro.cad},prod:{modo:UI.prod.modo,cad:UI.prod.cad},eqp:{modo:UI.eqp.modo,cad:UI.eqp.cad},cal:{f:UI.cal.f||{},fase:calFase(),vis:UI.cal.vis==='mapa'?'mapa':'cal'}}); }
 const uiP=k=>({car:UI.car,sai:UI.sai,prod:UI.prod,eqp:UI.eqp})[k]||UI.car;
 let view='eventos', currentEv=null;
 const VIEWS=['eventos','calendario','carregamentos','saidas','producao','equipes','frota'];
@@ -1369,7 +1387,7 @@ function drawMain(force){
 }
 /* como achar de novo o mesmo campo depois de redesenhar */
 function focoMain(a){ if(!a||!a.dataset) return ''; if(a.dataset.keep) return '[data-keep="'+cssq(a.dataset.keep)+'"]';
-  let s=''; for(const k of ['f','pick','act','cel','pday','pn','pm','evf','fn','fm','cq','stp','goday','kmv','gcad','calf','mf','calfase']){ const v=a.dataset[k]; if(v!=null){ s='[data-'+k+'="'+cssq(v)+'"]'; break; } }
+  let s=''; for(const k of ['f','pick','act','cel','pday','pn','pm','evf','fn','fm','cq','stp','goday','kmv','gcad','calf','mf','calfase','calvis']){ const v=a.dataset[k]; if(v!=null){ s='[data-'+k+'="'+cssq(v)+'"]'; break; } }
   if(!s) return a.id?'#'+cssq(a.id):'';
   ['dia','ev','cat','k','d','v'].forEach(k=>{ if(a.dataset[k]!=null&&s.indexOf('[data-'+k+'=')!==0) s+='[data-'+k+'="'+cssq(a.dataset[k])+'"]'; });
   const r=a.closest('[data-row]'); return r?'[data-row="'+cssq(r.dataset.row)+'"] '+s:s; }
@@ -1750,7 +1768,9 @@ function usoCalendario(a,b){
 function calHTML(){
   const m=calMes(), Y=+m.slice(0,4), Mo=+m.slice(5,7), t=hoje();
   const nD=new Date(Y,Mo,0).getDate(), prim=m+'-01', fim=m+'-'+pad2(nD);
-  let h='<div class="toolbar"><div class="pnav"><button type="button" class="btn" data-cn="-1" aria-label="Mês anterior">◀</button><span class="plbl">'+MESES_L[Mo-1]+' '+Y+'</span><button type="button" class="btn" data-cn="1" aria-label="Próximo mês">▶</button><button type="button" class="btn sm" data-cn="0">Hoje</button></div><span class="spacer"></span><span class="lbl">Clique no dia pra ver o detalhe</span><button type="button" class="btn primary" data-act="pdf-cal">PDF do relatório</button></div><div class="toolbar sub">'+pesSelHTML('data-cpes',calPes(),['EQUIPE','PROD'])+(calPes()?'<span class="lbl">Mostrando a agenda de <b>'+esc(pesNomeKey(calPes()))+'</b></span>':'<span class="lbl">Mostrar</span>'+calFiltroHTML()+(calF().indexOf('ev')>=0?calFaseHTML():''))+'</div>';
+  let h='<div class="toolbar"><div class="pnav"><button type="button" class="btn" data-cn="-1" aria-label="Mês anterior">◀</button><span class="plbl">'+MESES_L[Mo-1]+' '+Y+'</span><button type="button" class="btn" data-cn="1" aria-label="Próximo mês">▶</button><button type="button" class="btn sm" data-cn="0">Hoje</button></div>'+calVisHTML()+'<span class="spacer"></span><span class="lbl">Clique no dia pra ver o detalhe</span><button type="button" class="btn primary" data-act="pdf-cal">'+(UI.cal.vis==='mapa'?'PDF do mapa':'PDF do relatório')+'</button></div>';
+  if(UI.cal.vis==='mapa') return h+'<div class="toolbar sub">'+calFaseHTML()+'</div>'+calMapaHTML(m,prim,fim);
+  h+='<div class="toolbar sub">'+pesSelHTML('data-cpes',calPes(),['EQUIPE','PROD'])+(calPes()?'<span class="lbl">Mostrando a agenda de <b>'+esc(pesNomeKey(calPes()))+'</b></span>':'<span class="lbl">Mostrar</span>'+calFiltroHTML()+(calF().indexOf('ev')>=0?calFaseHTML():''))+'</div>';
   const evsM=evsAtivos().filter(e=>{ const p=evPer(e); return p&&p.a<=fim&&p.b>=prim; }).sort((a,b)=>{ const pa=evPer(a), pb=evPer(b); return pa.a<pb.a?-1:pa.a>pb.a?1:0; });
   const U=calContagem(prim,fim);
   h+='<div class="fwrap"><div class="calw"><div class="calh">'+DIAS3.slice(1).concat(DIAS3[0]).map(w=>'<span>'+w+'</span>').join('')+'</div><div class="calg">';
@@ -2125,7 +2145,7 @@ function onMainClick(e){
     if(a==='wpp-des'){ textoModal('Descarregamentos · texto pro WhatsApp',txtDescarregamentos()); return; }
     if(a==='pdf-des'){ pdfDescarregamentos(); return; }
     if(a==='pdf-cargas'){ pdfCargasModal(); return; }
-    if(a==='pdf-cal'){ pdfCalendario(); return; }
+    if(a==='pdf-cal'){ if(UI.cal.vis==='mapa') pdfCalMapa(); else pdfCalendario(); return; }
     if(a==='pdf-esc'){ pdfEscala(act.dataset.g==='PROD'?'PROD':'EQUIPE'); return; }
     if(a==='pdf-evs'){ pdfEventosLista(); return; }
     if(a==='wpp-sai'){ textoModal('Saídas · texto pro WhatsApp',txtSaidas()); return; }
@@ -2156,6 +2176,7 @@ function onMainClick(e){
   const fg=t.closest('[data-folga]'); if(fg){ if(readOnly) return; folgaToggle(fg.dataset.g,fg.dataset.folga,fg.dataset.k); render(); return; }
   const al=t.closest('[data-aloc]'); if(al){ FOCO={id:al.dataset.aloc,sel:'[data-f="funcao"]'}; drawMain(true); return; }
   const an=t.closest('[data-anew]'); if(an){ if(readOnly) return; const g=an.dataset.g, P=uiG(g); const o=criarAloc(g,{pessoaId:an.dataset.anew,nome:normName((pessoa(an.dataset.anew)||{}).nome),eventoId:P.ev||'',de:an.dataset.k,ate:an.dataset.k}); FOCO={id:o.id,sel:P.ev?'[data-f="fase"]':'select[data-f="eventoId"]'}; render(); return; }
+  const cvi=t.closest('[data-calvis]'); if(cvi){ UI.cal.vis=cvi.dataset.calvis==='mapa'?'mapa':'cal'; saveUI(); render(); return; }
   const cfa=t.closest('[data-calfase]'); if(cfa){ calFaseClick(cfa.dataset.calfase); saveUI(); render(); if(PANEL.open&&PANEL.mode==='dia') renderPanel(true); return; }
   const cf=t.closest('[data-calf]'); if(cf){ calClick(cf.dataset.calf); saveUI(); render(); if(PANEL.open&&PANEL.mode==='dia') renderPanel(true); return; }
   const fm=t.closest('[data-fm]'); if(fm){ UI.fro.cad=fm.dataset.fm==='1'; ROWDEL=null; saveUI(); render(); return; }
@@ -3063,6 +3084,47 @@ async function pdfEventosLista(){
     contratar.map(({e,c})=>({c:[evNome(e),normName(e.local)||'-',faixasTxt(c.falta),plural(c.falta.length,'DIA','DIAS')],mark:hex(evCor(e.id))})));
   pdfRodape(P,'EVENTOS');
   abrirPDF('EVENTOS_'+hoje().replace(/-/g,'')+'.pdf',P.doc.output('arraybuffer'));
+}
+
+/* ---------- calendário: mapa de dias (eventos nas linhas, dias nas colunas) ---------- */
+function calVisHTML(){ const v=UI.cal.vis==='mapa'?'mapa':'cal'; return '<div class="seg calvis" role="group" aria-label="Como ver"><button type="button" data-calvis="cal" class="'+(v==='cal'?'on':'')+'" aria-pressed="'+(v==='cal')+'">Calendário</button><button type="button" data-calvis="mapa" class="'+(v==='mapa'?'on':'')+'" aria-pressed="'+(v==='mapa')+'">Mapa de dias</button></div>'; }
+function mapaEventos(prim,fim){ const ds=diasEntre(prim,fim); return evsAtivos().filter(e=>ds.some(d=>fasesCal(e,d).length)).sort((a,b)=>{ const pa=evPer(a), pb=evPer(b); return (pa?pa.a:'9999')<(pb?pb.a:'9999')?-1:1; }); }
+function calMapaHTML(m,prim,fim){
+  const ds=diasEntre(prim,fim), t=hoje(), evs=mapaEventos(prim,fim);
+  if(!evs.length) return '<div class="emptymsg">Nenhum evento nesse mês'+(calFase().length?' com essa etapa':'')+'.</div>';
+  const U=calContagem(prim,fim);
+  let h='<div class="fwrap"><table class="fq esc mes evmapa"><thead><tr><th class="nm">Eventos</th>'+ds.map(d=>'<th class="'+(isWE(d)?'we':'')+(d===t?' today':'')+'">'+d.slice(8)+'<small>'+DIAS3[parseISO(d).getDay()]+'</small></th>').join('')+'</tr></thead><tbody>';
+  evs.forEach(e=>{ const pn=prodNomes(e), sub=[localCurto(e),pn.length?'PRODUTOR: '+pn.join(' / '):'SEM PRODUTOR'].filter(Boolean).join(' · ');
+    h+='<tr><td class="nm"><b title="'+esc(evNome(e))+'"><i class="evdot" style="--evc:'+evCor(e.id)+'"></i>'+esc(evNome(e))+'</b><small title="'+esc(sub)+'">'+esc(sub)+'</small></td>'
+      +ds.map(d=>{ const fs=fasesCal(e,d), cls='d'+(isWE(d)?' we':'')+(d===t?' today':'');
+        if(!fs.length) return '<td class="'+cls+'"></td>';
+        return '<td class="'+cls+'" data-dia2="'+d+'"><div class="fc ph-'+fs[0]+'" style="--evc:'+evCor(e.id)+'" title="'+esc(evNome(e)+' · '+fmtD(d)+' · '+fs.map(f=>PHN[f]).join(' + '))+'">'+fs.map(f=>FASE_L[f]).join('')+'</div></td>'; }).join('')+'</tr>'; });
+  h+='</tbody><tfoot>';
+  [['car','CARREGAMENTOS'],['des','DESCARREGAMENTOS'],['emp','EMPILHADEIRAS'],['eqp','EQUIPES'],['prod','PRODUTORES']].forEach(([k,l])=>{ if(!ds.some(d=>U.get(d)&&U.get(d)[k].size)) return;
+    h+='<tr class="tot"><td class="nm"><b>'+l+'</b><small>por dia</small></td>'+ds.map(d=>{ const n=U.get(d)?U.get(d)[k].size:0; return '<td class="d'+(isWE(d)?' we':'')+(d===t?' today':'')+'"'+(n?' data-dia2="'+d+'"':'')+'>'+(n?'<b class="tn cc-'+k+'">'+n+'</b>':'')+'</td>'; }).join('')+'</tr>'; });
+  h+='</tfoot></table></div>';
+  h+='<div class="flegend">'+evs.map(e=>'<span><i style="--evc:'+evCor(e.id)+'"></i>'+esc(sigla(e.id))+' = '+esc(evNome(e))+'</span>').join('')+'<span><b>M</b> montagem · <b>E</b> evento · <b>D</b> desmontagem</span></div>';
+  return h+'<p class="hint">Clique no dia pra ver o detalhe (caminhões, equipes, produção). Use <b>Etapa</b> pra ver só montagem, evento ou desmontagem.</p>';
+}
+async function pdfCalMapa(){
+  let P; try{ P=await pdfNovo('landscape'); }catch(e){ toast('Não consegui carregar o gerador de PDF (internet?).',true); return; }
+  const m=calMes(), Y=+m.slice(0,4), Mo=+m.slice(5,7), nD=new Date(Y,Mo,0).getDate(), prim=m+'-01', fim=m+'-'+pad2(nD), mt=MESES_L[Mo-1]+' '+Y, ds=diasEntre(prim,fim);
+  const fz=calFase().length?'SÓ '+['mont','ev','desm'].filter(x=>calFase().indexOf(x)>=0).map(x=>({mont:'MONTAGEM',ev:'EVENTO',desm:'DESMONTAGEM'})[x]).join(' + '):'MONTAGEM, EVENTO E DESMONTAGEM';
+  const evs=mapaEventos(prim,fim);
+  pdfCab(P,'MAPA DE DIAS · '+mt,fz,plural(evs.length,'EVENTO','EVENTOS'));
+  if(!evs.length){ P.font('bold',11); P.tc(C.muted); P.T('NENHUM EVENTO NESSE MÊS.',P.M,P.y+4); }
+  else {
+    const wN=Math.floor((P.CW-52)/nD*100)/100;
+    const cols=[{h:'EVENTO',w:52,b:true,fs:6.8}].concat(ds.map(d=>({h:d.slice(8)+'\n'+DIAS3[parseISO(d).getDay()].slice(0,1),w:wN,fs:6.4,b:true})));
+    const U=calContagem(prim,fim);
+    const rows=evs.map(e=>({c:[evNome(e)+'\n'+(prodNomes(e).length?'PROD.: '+prodNomes(e).join(' / '):'SEM PRODUTOR')].concat(ds.map(d=>fasesCal(e,d).map(f=>FASE_L[f]).join('')||'')),mark:hex(evCor(e.id))}));
+    [['car','CARREG.'],['des','DESCARREG.'],['emp','EMPILH.'],['eqp','EQUIPES'],['prod','PRODUTORES']].forEach(([k,l])=>{ if(ds.some(d=>U.get(d)&&U.get(d)[k].size)) rows.push({c:[l+' POR DIA'].concat(ds.map(d=>{ const n=U.get(d)?U.get(d)[k].size:0; return n?String(n):''; })),mark:C.line}); });
+    pdfTabela(P,cols,rows);
+    P.font('normal',7.4); P.tc(C.muted); const txt=evs.map(e=>sigla(e.id)+' = '+evNome(e)).join('   ·   ')+'   ·   M MONTAGEM · E EVENTO · D DESMONTAGEM';
+    P.wrap(txt,P.CW).forEach(l=>{ P.ensure(5); P.T(l,P.M,P.y+3); P.y+=3.6; });
+  }
+  pdfRodape(P,'MAPA DE DIAS · '+mt);
+  abrirPDF('MAPA-DE-DIAS_'+m.replace('-','')+'.pdf',P.doc.output('arraybuffer'));
 }
 
 init();
