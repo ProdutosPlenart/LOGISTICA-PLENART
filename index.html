@@ -742,6 +742,14 @@ body.pv-open,body.login-open,body.p-open{overflow:hidden}
 .fq.pes .eqst.f{color:var(--muted)}
 .fq.pes tr.eqg td.nm small{color:var(--muted)}
 
+/* falta */
+.fq .fc.falta{background:var(--danger-soft);border:1px solid var(--danger);border-left:4px solid var(--danger);color:var(--danger);font:800 17px/1 var(--cond)}
+.fq.pes td.tt.falta{color:var(--on-accent);background:var(--danger)}
+.flegend i.falta{background:var(--danger)}
+.dh.falta{background:var(--danger)}
+.seg.mfolga button.on.fx{background:var(--danger);border-color:var(--danger);color:var(--on-accent)}
+.cc-falta{color:var(--danger);font-weight:700}
+
 </style>
 </head>
 <body>
@@ -1033,7 +1041,7 @@ function normItem(o){
     delete x.link; return x; }
   if(x.tipo==='VEICULO'){ ['nome','placa','modelo','motorista','dono','donoNome','demId','obs','sub'].forEach(s); if(x.sub!=='CARRETA'&&x.sub!=='CAVALO') x.sub=''; x.cat=FR_CAT.indexOf(x.cat)>=0?x.cat:'CAMINHAO'; x.caminhao=x.cat==='EQUIP'&&!!x.caminhao; if(['NOSSO','AGREGADO','TERCEIRO'].indexOf(x.dono)<0) x.dono='NOSSO'; x.ordem=num(x.ordem); delete x.link; return x; }
   if(x.tipo==='PESSOA'){ ['grupo','nome','lider','integrantes','contato','vinculo','empresa','obs'].forEach(s); if(x.grupo!=='PROD') x.grupo='EQUIPE'; if(x.vinculo!=='TERCEIRO') x.vinculo='NOSSO'; x.ordem=num(x.ordem); delete x.link; return x; }
-  if(x.tipo==='ALOC'){ const fg=x.folga===true||x.folga==='true'; ['grupo','pessoaId','nome','empresa','eventoId','fase','de','ate','hora','funcao','obs','membro'].forEach(s); x.folga=fg; if(!fg) x.membro=''; if(fg){ x.eventoId=''; x.fase=''; x.hora=''; } if(x.grupo!=='PROD') x.grupo='EQUIPE'; if(['mont','ev','desm'].indexOf(x.fase)<0) x.fase=''; ['de','ate'].forEach(k=>{ if(x[k]&&!ISO_RE.test(x[k])) x[k]=''; }); delete x.link; return x; }
+  if(x.tipo==='ALOC'){ const fg=x.folga===true||x.folga==='true'; ['grupo','pessoaId','nome','empresa','eventoId','fase','de','ate','hora','funcao','obs','membro'].forEach(s); x.folga=fg; if(!fg) x.membro=''; x.falta=fg&&!!x.membro&&(x.falta===true||x.falta==='true'); if(fg){ x.eventoId=''; x.fase=''; x.hora=''; } if(x.grupo!=='PROD') x.grupo='EQUIPE'; if(['mont','ev','desm'].indexOf(x.fase)<0) x.fase=''; ['de','ate'].forEach(k=>{ if(x[k]&&!ISO_RE.test(x[k])) x[k]=''; }); delete x.link; return x; }
   ['eventoId','obs','motorista','veiculoId','status'].forEach(s);
   if(x.tipo==='VIAGEM'){ x.sentido=x.sentido==='TRAZ'?'TRAZ':'LEVA';
     if(x.carga!=null&&x.leva==null&&x.traz==null){ if(x.sentido==='TRAZ') x.traz=x.carga; else x.leva=x.carga; } delete x.carga;
@@ -1410,7 +1418,7 @@ function drawMain(force){
 }
 /* como achar de novo o mesmo campo depois de redesenhar */
 function focoMain(a){ if(!a||!a.dataset) return ''; if(a.dataset.keep) return '[data-keep="'+cssq(a.dataset.keep)+'"]';
-  let s=''; for(const k of ['f','pick','act','cel','pday','pn','pm','evf','fn','fm','cq','stp','goday','kmv','gcad','calf','mf','calfase','calvis','eqvis']){ const v=a.dataset[k]; if(v!=null){ s='[data-'+k+'="'+cssq(v)+'"]'; break; } }
+  let s=''; for(const k of ['f','pick','act','cel','pday','pn','pm','evf','fn','fm','cq','stp','goday','kmv','gcad','calf','mf','calfase','calvis','eqvis','mfp']){ const v=a.dataset[k]; if(v!=null){ s='[data-'+k+'="'+cssq(v)+'"]'; break; } }
   if(!s) return a.id?'#'+cssq(a.id):'';
   ['dia','ev','cat','k','d','v'].forEach(k=>{ if(a.dataset[k]!=null&&s.indexOf('[data-'+k+'=')!==0) s+='[data-'+k+'="'+cssq(a.dataset[k])+'"]'; });
   const r=a.closest('[data-row]'); return r?'[data-row="'+cssq(r.dataset.row)+'"] '+s:s; }
@@ -1985,6 +1993,8 @@ function diaPanelHTML(){
     h+='</div>'; });
   const se=porEv.get(''); if(se) h+='<div class="psec"><h3>Sem evento</h3>'+se.cam.concat(se.eq,se.car,se.prod,se.eqp).join('')+'</div>';
   const fol=folgasAtivas().filter(f=>alocDias(f).indexOf(k)>=0&&(pes?alocKey(f)===pes:fo(f.grupo==='PROD'?'prod':'eqp')));
+  const ftl=faltasAtivas().filter(f=>alocDias(f).indexOf(k)>=0&&(pes?alocKey(f)===pes:fo('eqp')));
+  if(ftl.length) h+='<div class="psec"><h3>Faltaram</h3>'+ftl.map(f=>'<div class="prow" style="border-left-color:var(--danger)"><b>'+esc(alocNome(f))+'</b><span class="pd">'+esc(normName(f.obs)||'FALTA')+'</span></div>').join('')+'</div>';
   if(fol.length) h+='<div class="psec"><h3>De folga</h3>'+fol.map(f=>'<div class="prow" style="border-left-color:var(--muted)"><b>'+esc(alocNome(f)||'?')+'</b><span class="pd">'+esc([f.grupo==='PROD'?'PRODUTOR':'EQUIPE',normName(f.obs)].filter(Boolean).join(' · '))+'</span></div>').join('')+'</div>';
   if(pes) h+='<p class="hint">Agenda de '+esc(pesNomeKey(pes))+(porEv.size||fol.length?'':': livre nesse dia')+'.</p>'; else if(!tudo) h+='<p class="hint">Mostrando só: '+esc(CAL_F.filter(([x])=>fo(x)).map(([,l])=>l).join(', '))+'.</p>';
   return h+'</div>';
@@ -2196,7 +2206,9 @@ function onMainClick(e){
   }
   const gc=t.closest('[data-gcad]'); if(gc){ uiG(gc.dataset.gcad).cad=gc.dataset.v==='1'; ROWDEL=null; saveUI(); render(); return; }
   const ev2=t.closest('[data-eqvis]'); if(ev2){ UI.eqp.vis=ev2.dataset.eqvis==='pessoas'?'pessoas':'equipe'; saveUI(); render(); return; }
-  const mfo=t.closest('[data-mfolga]'); if(mfo){ if(readOnly) return; membroFolgaToggle(mfo.dataset.mfolga,mfo.dataset.mb,mfo.dataset.k); render(); return; }
+  const mfo=t.closest('[data-mfolga]'); if(mfo){ if(readOnly) return; const pid=mfo.dataset.mfolga, mb=mfo.dataset.mb, d=mfo.dataset.k;
+    if(UI.eqp.mfp==='falta'||faltaMembroDias(pid,mb).has(d)) membroFaltaToggle(pid,mb,d); else membroFolgaToggle(pid,mb,d); render(); return; }
+  const mfp=t.closest('[data-mfp]'); if(mfp){ UI.eqp.mfp=mfp.dataset.mfp==='falta'?'falta':'folga'; render(); return; }
   const mf=t.closest('[data-mf]'); if(mf){ uiG(mf.dataset.mf).mf=mf.dataset.v==='1'; render(); return; }
   const fg=t.closest('[data-folga]'); if(fg){ if(readOnly) return; folgaToggle(fg.dataset.g,fg.dataset.folga,fg.dataset.k); render(); return; }
   const al=t.closest('[data-aloc]'); if(al){ FOCO={id:al.dataset.aloc,sel:'[data-f="funcao"]'}; drawMain(true); return; }
@@ -2799,11 +2811,15 @@ function alocEmpresa(a){ const p=pessoa(a.pessoaId); return p?(p.vinculo==='TERC
 function alocDias(a){ if(!a.de&&!a.ate) return []; const ds=diasEntre(a.de||a.ate,a.ate||a.de); return ds.length>200?[]:ds; }
 function alocsAtivas(g){ return itens.filter(x=>x.tipo==='ALOC'&&!x.folga&&(!g||x.grupo===g)&&(!x.eventoId||evAtivo(evById(x.eventoId)))); }
 /* folga: ALOC com folga=true (sem evento) · de/até + motivo em obs */
-function folgasAtivas(g){ return itens.filter(x=>x.tipo==='ALOC'&&x.folga&&(!g||x.grupo===g)); }
+function folgasAtivas(g){ return itens.filter(x=>x.tipo==='ALOC'&&x.folga&&!x.falta&&(!g||x.grupo===g)); }
+/* falta: alguém da equipe faltou (ALOC folga+falta, sempre de uma pessoa) */
+function faltasAtivas(g){ return itens.filter(x=>x.tipo==='ALOC'&&x.falta&&(!g||x.grupo===g)); }
+function faltaMembroDias(pid,mb){ const m=IX.faltaM&&IX.faltaM.get(memKey(pid,mb)); return m||new Map(); }
 function folgaDias(k){ const m=IX.folga&&IX.folga.get(k); return m||new Map(); }
 function pessoaSub(p){ return [p.vinculo==='TERCEIRO'?'TERCEIRIZADO'+(tr(p.empresa)?' · '+normName(p.empresa):''):'NOSSO',tr(p.lider)?'LÍDER '+normName(p.lider):'',tr(p.contato)?normName(p.contato):''].filter(Boolean).join(' · '); }
 /* índice: quem -> dia -> alocações (pra achar a mesma equipe/produtor em dois eventos no mesmo dia) */
-function buildAloc(){ const F=new Map(), FM=new Map(); folgasAtivas().forEach(f=>{ if(f.membro){ if(!f.pessoaId) return; const mk=memKey(f.pessoaId,f.membro); let mm=FM.get(mk); if(!mm){ mm=new Map(); FM.set(mk,mm); } alocDias(f).forEach(d=>mm.set(d,f)); return; } }); IX.folgaM=FM;
+function buildAloc(){ const F=new Map(), FM=new Map(), XM=new Map();
+  faltasAtivas().forEach(f=>{ if(!f.pessoaId||!f.membro) return; const mk=memKey(f.pessoaId,f.membro); let mm=XM.get(mk); if(!mm){ mm=new Map(); XM.set(mk,mm); } alocDias(f).forEach(d=>mm.set(d,f)); }); IX.faltaM=XM; folgasAtivas().forEach(f=>{ if(f.membro){ if(!f.pessoaId) return; const mk=memKey(f.pessoaId,f.membro); let mm=FM.get(mk); if(!mm){ mm=new Map(); FM.set(mk,mm); } alocDias(f).forEach(d=>mm.set(d,f)); return; } }); IX.folgaM=FM;
   folgasAtivas().filter(f=>!f.membro).forEach(f=>{ const k=alocKey(f); if(!k) return; let m=F.get(k); if(!m){ m=new Map(); F.set(k,m); } alocDias(f).forEach(d=>m.set(d,f)); }); IX.folga=F;
   const M=new Map(); alocsAtivas().forEach(a=>{ const k=alocKey(a); if(!k) return; let m=M.get(k); if(!m){ m=new Map(); M.set(k,m); } alocDias(a).forEach(d=>{ let l=m.get(d); if(!l){ l=[]; m.set(d,l); } l.push(a); }); }); IX.aloc=M; }
 function choqueAloc(a){ const k=alocKey(a), m=IX.aloc&&IX.aloc.get(k), por=new Map(); if(!m||!a.eventoId) return por;
@@ -2887,11 +2903,11 @@ function folgaRowHTML(a){
   let h='<div class="crow arow folgarow" data-row="'+id+'">'
     +'<div class="c c-quem"><span>'+esc(I.Um)+'</span><span class="pickwrap'+(mode==='__outro'?' outro':'')+'"><select data-pick="pessoaId" aria-label="'+esc(I.Um)+' de folga"'+dis+'><option value=""'+(mode===''?' selected':'')+'>— '+I.um.toUpperCase()+'</option>'+ps.map(op).join('')+'<option value="__outro"'+(mode==='__outro'?' selected':'')+'>OUTRO (DIGITAR)</option></select>'
       +(mode==='__outro'?'<input type="text" data-f="nome" value="'+esc(a.nome)+'" placeholder="NOME" aria-label="Nome" autocomplete="off"'+dis+'>':'')+'</span>'
-      +(p&&a.grupo==='EQUIPE'&&membrosDe(p).length?'<select class="memsel" data-f="membro" aria-label="Quem da equipe folga"'+dis+'><option value=""'+(a.membro?'':' selected')+'>EQUIPE TODA</option>'+membrosDe(p).concat(a.membro&&membrosDe(p).indexOf(normName(a.membro))<0?[normName(a.membro)]:[]).map(n=>'<option value="'+esc(n)+'"'+(normName(a.membro)===n?' selected':'')+'>SÓ '+esc(n)+'</option>').join('')+'</select>':'')+'</div>'
+      +(p&&a.grupo==='EQUIPE'&&membrosDe(p).length?'<select class="memsel" data-f="membro" aria-label="Quem da equipe"'+dis+'>'+(a.falta?'':'<option value=""'+(a.membro?'':' selected')+'>EQUIPE TODA</option>')+membrosDe(p).concat(a.membro&&membrosDe(p).indexOf(normName(a.membro))<0?[normName(a.membro)]:[]).map(n=>'<option value="'+esc(n)+'"'+(normName(a.membro)===n?' selected':'')+'>SÓ '+esc(n)+'</option>').join('')+'</select>':'')+'</div>'
     +'<label class="c c-dt"><span>De</span>'+inDt('de','Folga do dia')+'</label><label class="c c-dt"><span>Até</span>'+inDt('ate','Folga até o dia')+'</label>'
     +'<label class="c c-func"><span>Motivo</span><input type="text" data-f="obs" value="'+esc(a.obs)+'" placeholder="EX: DESCANSO DEPOIS DO CBM" aria-label="Motivo da folga" autocomplete="off"'+dis+'></label>'
     +'<div class="c c-act">'+(ro?'':'<button type="button" class="ib x2" data-act="tirar" title="Tirar essa folga" aria-label="Tirar essa folga">×</button>')+'</div>';
-  if(ROWDEL===a.id) h+='<div class="confirm">Tirar a folga de '+esc(alocNome(a)||'?')+'?<button type="button" class="btn danger solid sm" data-act="tirar-sim">Tirar</button><button type="button" class="btn sm" data-act="tirar-nao">Cancelar</button></div>';
+  if(ROWDEL===a.id) h+='<div class="confirm">Tirar a '+(a.falta?'falta':'folga')+' de '+esc(alocNome(a)||'?')+'?<button type="button" class="btn danger solid sm" data-act="tirar-sim">Tirar</button><button type="button" class="btn sm" data-act="tirar-nao">Cancelar</button></div>';
   return h+avisosHTML(a)+'</div>';
 }
 function folgaHead(g){ return '<div class="ahead folgarow" aria-hidden="true"><span>'+esc(G_INFO[g].Um)+'</span><span>De</span><span>Até</span><span>Motivo</span><span></span></div>'; }
@@ -2929,11 +2945,13 @@ function escalaHTML(g){
   const M=new Map(); lista.forEach(a=>{ const k=alocKey(a); if(!k) return; let m=M.get(k); if(!m){ m=new Map(); M.set(k,m); } alocDias(a).forEach(d=>{ if(d<per.a||d>per.b) return; let l=m.get(d); if(!l){ l=[]; m.set(d,l); } l.push(a); }); });
   const nav=pnavHTML(I.key,per,k=>lista.filter(a=>alocDias(a).indexOf(k)>=0).length);
   let h='<div class="toolbar">'+segCadG(g)+(g==='EQUIPE'?segVisEq(P):'')+nav.nav+'<span class="spacer"></span>'+'<button type="button" class="btn" data-act="pdf-esc" data-g="'+g+'">'+(g==='EQUIPE'&&P.vis==='pessoas'?'PDF por pessoa':'PDF da escala')+'</button>'+(ro?'':'<button type="button" class="btn" data-act="folga-add" data-g="'+g+'">+ Folga</button><button type="button" class="btn primary" data-act="aloc-add" data-g="'+g+'">+ Alocar '+esc(I.um)+'</button>')+'</div>'
-    +'<div class="toolbar sub">'+evSelHTML(I.key,P.ev)+pesSelHTML('data-gpes="'+g+'"',pes,[g])+(ro||(g==='EQUIPE'&&P.vis==='pessoas')?'':'<div class="seg mfolga" role="group" aria-label="O que o clique no quadro faz"><span class="segl">Clique marca</span><button type="button" data-mf="'+g+'" data-v="0" class="'+(P.mf?'':'on')+'" aria-pressed="'+!P.mf+'">Alocação</button><button type="button" data-mf="'+g+'" data-v="1" class="'+(P.mf?'on':'')+'" aria-pressed="'+!!P.mf+'">Folga</button></div>')+'<span class="lbl">'+(g==='EQUIPE'&&P.vis==='pessoas'?'Clique no dia da pessoa pra folgar ou tirar a folga':P.mf?'Clique no dia pra marcar ou tirar a folga':'Clique no quadrinho vazio pra alocar · no colorido pra editar')+'</span></div>'+nav.semana;
+    +'<div class="toolbar sub">'+evSelHTML(I.key,P.ev)+pesSelHTML('data-gpes="'+g+'"',pes,[g])+(ro||(g==='EQUIPE'&&P.vis==='pessoas')?'':'<div class="seg mfolga" role="group" aria-label="O que o clique no quadro faz"><span class="segl">Clique marca</span><button type="button" data-mf="'+g+'" data-v="0" class="'+(P.mf?'':'on')+'" aria-pressed="'+!P.mf+'">Alocação</button><button type="button" data-mf="'+g+'" data-v="1" class="'+(P.mf?'on':'')+'" aria-pressed="'+!!P.mf+'">Folga</button></div>')+(g==='EQUIPE'&&P.vis==='pessoas'&&!ro?'<div class="seg mfolga" role="group" aria-label="O que o clique marca"><span class="segl">Clique marca</span><button type="button" data-mfp="folga" class="'+(P.mfp==='falta'?'':'on')+'" aria-pressed="'+(P.mfp!=='falta')+'">Folga</button><button type="button" data-mfp="falta" class="'+(P.mfp==='falta'?'on fx':'')+'" aria-pressed="'+(P.mfp==='falta')+'">Falta</button></div>':'')+'<span class="lbl">'+(g==='EQUIPE'&&P.vis==='pessoas'?(P.mfp==='falta'?'Clique no dia de quem faltou (F vermelho) · clique de novo pra tirar':'Clique no dia da pessoa pra folgar ou tirar a folga'):P.mf?'Clique no dia pra marcar ou tirar a folga':'Clique no quadrinho vazio pra alocar · no colorido pra editar')+'</span></div>'+nav.semana;
   const ds=diasEntre(per.a,per.b), t=hoje(), ps=pessoas(g);
   const folgasP=folgasAtivas(g).filter(f=>!pes||alocKey(f)===pes), FM=new Map(); folgasP.forEach(f=>{ const k=alocKey(f); if(!k||f.membro) return; let m=FM.get(k); if(!m){ m=new Map(); FM.set(k,m); } alocDias(f).forEach(d=>m.set(d,f)); });
   if(g==='EQUIPE'&&P.vis==='pessoas'){ h+=pessoasMapaHTML(per,pes);
     const flp=ordAloc(folgasP.filter(f=>!alocDias(f).length||alocDias(f).some(d=>d>=per.a&&d<=per.b)));
+    const fxl=ordAloc(faltasAtivas('EQUIPE').filter(f=>(!pes||alocKey(f)===pes)&&alocDias(f).some(d=>d>=per.a&&d<=per.b)));
+    if(fxl.length) h+='<div class="dgrp"><div class="dh falta"><b>Faltas</b><span>'+plural(fxl.length,'falta','faltas')+' '+esc(perQual(per))+'</span></div><div class="alist">'+folgaHead(g).replace('Motivo','Motivo / obs.')+fxl.map(folgaRowHTML).join('')+'</div></div>';
     if(flp.length) h+='<div class="dgrp"><div class="dh folga"><b>Folgas</b><span>'+plural(flp.length,'folga','folgas')+' '+esc(perQual(per))+'</span></div><div class="alist">'+folgaHead(g)+flp.map(folgaRowHTML).join('')+'</div></div>';
     return h; }
   const rows=[]; const vistos=new Set();
@@ -3002,17 +3020,18 @@ const calTudo=()=>calF().length===CAL_F.length;
 function calFiltroHTML(){ const on=calF(), tudo=calTudo(); return '<div class="seg calf" role="group" aria-label="O que ver no calendário"><button type="button" data-calf="" class="'+(tudo?'on':'')+'" aria-pressed="'+tudo+'">Tudo</button>'+CAL_F.map(([k,l])=>{ const o=!tudo&&on.indexOf(k)>=0; return '<button type="button" data-calf="'+k+'" class="'+(o?'on':'')+'" aria-pressed="'+o+'">'+l+'</button>'; }).join('')+'</div>'; }
 function calClick(k){ if(!k){ UI.cal.f={}; return; } const on=calF(); let nv; if(calTudo()) nv=[k]; else nv=on.indexOf(k)>=0?on.filter(x=>x!==k):on.concat([k]); UI.cal.f={}; nv.forEach(x=>UI.cal.f[x]=true); }
 function calContagem(a,b){
-  const M=new Map(); const add=(d,g,id)=>{ if(!d||d<a||d>b) return; let o=M.get(d); if(!o){ o={car:new Set(),des:new Set(),emp:new Set(),prod:new Set(),eqp:new Set(),carro:new Set(),folga:new Set()}; M.set(d,o); } o[g].add(id); };
+  const M=new Map(); const add=(d,g,id)=>{ if(!d||d<a||d>b) return; let o=M.get(d); if(!o){ o={car:new Set(),des:new Set(),emp:new Set(),prod:new Set(),eqp:new Set(),carro:new Set(),folga:new Set(),falta:new Set()}; M.set(d,o); } o[g].add(id); };
   trabalho().forEach(it=>{ if(cancelado(it)) return; const ev=evById(it.eventoId); if(it.eventoId&&!evAtivo(ev)) return;
     if(it.tipo==='VIAGEM'){ add(it.carData,'car',it.id); add(desData(it),'des',it.id); }
     else if(it.tipo==='EQUIP') eqDias(it).forEach(d=>add(d,'emp',it.id));
     else it.dias.forEach(d=>add(d,'carro',it.id)); });
   alocsAtivas().forEach(x=>{ const k=alocKey(x)||x.id; alocDias(x).forEach(d=>add(d,x.grupo==='PROD'?'prod':'eqp',k)); });
+  if(calF().indexOf('eqp')>=0) faltasAtivas().forEach(x=>{ const k=memKey(x.pessoaId,x.membro); alocDias(x).forEach(d=>add(d,'falta',k)); });
   const fF=calF(); folgasAtivas().forEach(x=>{ if(fF.indexOf(x.grupo==='PROD'?'prod':'eqp')<0) return; const k=x.membro&&x.pessoaId?memKey(x.pessoaId,x.membro):alocKey(x)||x.id; alocDias(x).forEach(d=>add(d,'folga',k)); });
   return M;
 }
-const CAL_TXT={folga:['DE FOLGA','DE FOLGA'],car:['CARREG.','CARREG.'],des:['DESCARREG.','DESCARREG.'],emp:['EMPILH.','EMPILH.'],prod:['PRODUTOR','PRODUTORES'],eqp:['EQUIPE','EQUIPES'],carro:['CARRO','CARROS']};
-function calCntHTML(u){ if(!u) return ''; const ks=calF().filter(k=>k!=='ev').concat(calTudo()?['carro']:[]).concat(['folga']); return ks.filter(k=>u[k].size).map(k=>'<span class="cc cc-'+k+'">'+u[k].size+' '+CAL_TXT[k][u[k].size>1?1:0]+'</span>').join(''); }
+const CAL_TXT={falta:['FALTA','FALTAS'],folga:['DE FOLGA','DE FOLGA'],car:['CARREG.','CARREG.'],des:['DESCARREG.','DESCARREG.'],emp:['EMPILH.','EMPILH.'],prod:['PRODUTOR','PRODUTORES'],eqp:['EQUIPE','EQUIPES'],carro:['CARRO','CARROS']};
+function calCntHTML(u){ if(!u) return ''; const ks=calF().filter(k=>k!=='ev').concat(calTudo()?['carro']:[]).concat(['folga','falta']); return ks.filter(k=>u[k].size).map(k=>'<span class="cc cc-'+k+'">'+u[k].size+' '+CAL_TXT[k][u[k].size>1?1:0]+'</span>').join(''); }
 
 /* ---------- filtro por equipe / produtor ---------- */
 function pesLista(g){ const out=pessoas(g).map(p=>({key:'p:'+p.id,nome:normName(p.nome)||'(SEM NOME)',g:g})); const vis=new Set(out.map(o=>o.key)); alocsAtivas(g).forEach(a=>{ const k=alocKey(a); if(k&&!vis.has(k)){ vis.add(k); out.push({key:k,nome:alocNome(a)+' (TERCEIRIZADO)',g:g}); } }); return out; }
@@ -3073,7 +3092,7 @@ async function pdfEscala(g){
   let P; try{ P=await pdfNovo('landscape'); }catch(e){ toast('Não consegui carregar o gerador de PDF (internet?).',true); return; }
   const I=G_INFO[g], U=uiG(g), per=periodo(U), pes=U.pes&&pesNomeKey(U.pes)?U.pes:'';
   const noP=a=>alocDias(a).some(d=>d>=per.a&&d<=per.b);
-  const lista=alocsAtivas(g).filter(a=>(!U.ev||a.eventoId===U.ev)&&(!pes||alocKey(a)===pes)&&noP(a)).concat(U.ev?[]:folgasAtivas(g).filter(f=>(!pes||alocKey(f)===pes)&&noP(f)));
+  const lista=alocsAtivas(g).filter(a=>(!U.ev||a.eventoId===U.ev)&&(!pes||alocKey(a)===pes)&&noP(a)).concat(U.ev?[]:folgasAtivas(g).concat(faltasAtivas(g)).filter(f=>(!pes||alocKey(f)===pes)&&noP(f)));
   pdfCab(P,'ESCALA '+(g==='PROD'?'DA PRODUÇÃO':'DAS EQUIPES'),perTxt(per),[filtroEvTxt(U.ev),pes?'SÓ '+pesNomeKey(pes):''].filter(Boolean).join(' · '));
   if(!lista.length){ P.font('bold',11); P.tc(C.muted); P.T('NINGUÉM ALOCADO NESSE PERÍODO.',P.M,P.y+4); pdfRodape(P,'ESCALA · '+perTxt(per)); abrirPDF(pdfNome('ESCALA-'+I.uns.toUpperCase(),per),P.doc.output('arraybuffer')); return; }
   const by=new Map(); lista.forEach(a=>{ const k=alocKey(a)||a.id; if(!by.has(k)) by.set(k,[]); by.get(k).push(a); });
@@ -3091,7 +3110,7 @@ async function pdfEscala(g){
   pdfSub(P,'DETALHE POR '+I.um.toUpperCase(),'');
   ordem.forEach(k=>{ const l=ordAloc(by.get(k)); P.ensure(30); pdfBarra(P,nomeK(k),plural(l.length,'ALOCAÇÃO','ALOCAÇÕES'));
     pdfTabela(P,[{h:'DIAS',w:34,b:true},{h:'EVENTO',w:58,b:true},{h:'LOCAL',w:62,mut:true,fs:7.2},{h:'ETAPA',w:26},{h:'HORA',w:14},{h:'O QUE FAZ',w:40}],
-      l.map(a=>{ if(a.folga) return {c:[alocDiasTxt(a),'FOLGA'+(a.membro?' · SÓ '+normName(a.membro):''),'-','-','-',normName(a.obs)||'-'],mark:C.line}; const e=evById(a.eventoId); return {c:[alocDiasTxt(a),e?evNome(e):'SEM EVENTO',e?normName(e.local)||'-':'-',a.fase?PHN[a.fase]:'-',a.hora||'-',normName(a.funcao)||'-'],mark:e?hex(evCor(e.id)):C.line}; })); });
+      l.map(a=>{ if(a.folga) return {c:[alocDiasTxt(a),(a.falta?'FALTA':'FOLGA')+(a.membro?' · '+(a.falta?'':'SÓ ')+normName(a.membro):''),'-','-','-',normName(a.obs)||'-'],mark:C.line}; const e=evById(a.eventoId); return {c:[alocDiasTxt(a),e?evNome(e):'SEM EVENTO',e?normName(e.local)||'-':'-',a.fase?PHN[a.fase]:'-',a.hora||'-',normName(a.funcao)||'-'],mark:e?hex(evCor(e.id)):C.line}; })); });
   pdfRodape(P,'ESCALA '+(g==='PROD'?'DA PRODUÇÃO':'DAS EQUIPES')+' · '+perTxt(per));
   abrirPDF(pdfNome('ESCALA-'+(g==='PROD'?'PRODUCAO':'EQUIPES'),per),P.doc.output('arraybuffer'));
 }
@@ -3165,9 +3184,18 @@ const memKey=(pid,mb)=>'p:'+pid+'|'+chaveNome(mb);
 function folgaMembroDias(pid,mb){ const m=IX.folgaM&&IX.folgaM.get(memKey(pid,mb)); return m||new Map(); }
 const trabTime=(k,d)=>{ const m=IX.aloc&&IX.aloc.get(k); return !!(m&&(m.get(d)||[]).length); };
 /* situação de um integrante no dia: F (folga dele ou da equipe toda), T (trabalhando: a equipe está alocada) ou '' */
-function sitMembro(p,mb,d){ const k='p:'+p.id; if(folgaMembroDias(p.id,mb).has(d)||folgaDias(k).has(d)) return 'F'; return trabTime(k,d)?'T':''; }
+function sitMembro(p,mb,d){ const k='p:'+p.id; if(faltaMembroDias(p.id,mb).has(d)) return 'X'; if(folgaMembroDias(p.id,mb).has(d)||folgaDias(k).has(d)) return 'F'; return trabTime(k,d)?'T':''; }
 /* dias seguidos trabalhando até o dia (olha até 13 dias pra trás) */
 function seqTrab(p,mb,d){ let n=0, x=d; for(let i=0;i<14;i++){ if(sitMembro(p,mb,x)!=='T') break; n++; x=addIso(x,-1); } return n; }
+function membroFaltaToggle(pid,mb,d){
+  const p=pessoa(pid); if(!p) return; const f=faltaMembroDias(pid,mb).get(d);
+  if(!f){ criarAloc('EQUIPE',{folga:true,falta:true,pessoaId:pid,nome:normName(p.nome),membro:mb,de:d,ate:d}); return; }
+  const de=f.de||f.ate, ate=f.ate||f.de;
+  if(de===ate){ apagar(f.id).then(refresh).catch(erroGravar); return; }
+  if(d===de){ setCampo(f.id,{de:addIso(d,1)}); return; }
+  if(d===ate){ setCampo(f.id,{ate:addIso(d,-1)}); return; }
+  setCampo(f.id,{ate:addIso(d,-1)}); criarAloc('EQUIPE',{folga:true,falta:true,pessoaId:f.pessoaId,nome:f.nome,membro:f.membro,de:addIso(d,1),ate:ate,obs:f.obs});
+}
 function membroFolgaToggle(pid,mb,d){
   const p=pessoa(pid); if(!p) return; if(folgaDias('p:'+pid).has(d)){ toast('A equipe toda está de folga nesse dia. Tire a folga da equipe primeiro.',true); return; }
   const f=folgaMembroDias(pid,mb).get(d);
@@ -3183,23 +3211,24 @@ function pessoasMapaHTML(per,pes,evF){
   const ro=readOnly, ds=diasEntre(per.a,per.b), t=hoje(), mes=per.modo==='mes';
   const ps=pessoas('EQUIPE').filter(p=>!pes||pes==='p:'+p.id);
   if(!ps.length) return '<div class="emptymsg">Nenhuma equipe cadastrada. Cadastre em <button type="button" class="btn sm" data-gcad="EQUIPE" data-v="1">Cadastro</button> com o líder e os integrantes.</div>';
-  let h='<div class="fwrap"><table class="fq esc pes'+(mes?' mes':'')+'"><thead><tr><th class="nm">Pessoas</th>'+ds.map(d=>'<th class="'+(isWE(d)?'we':'')+(d===t?' today':'')+'">'+(mes?d.slice(8):fmtDM(d))+'<small>'+DIAS3[parseISO(d).getDay()]+'</small></th>').join('')+'<th class="tt" title="Dias trabalhados no período">TRAB.</th><th class="tt" title="Dias de folga no período">FOLGA</th></tr></thead><tbody>';
+  let h='<div class="fwrap"><table class="fq esc pes'+(mes?' mes':'')+'"><thead><tr><th class="nm">Pessoas</th>'+ds.map(d=>'<th class="'+(isWE(d)?'we':'')+(d===t?' today':'')+'">'+(mes?d.slice(8):fmtDM(d))+'<small>'+DIAS3[parseISO(d).getDay()]+'</small></th>').join('')+'<th class="tt" title="Dias trabalhados no período">TRAB.</th><th class="tt" title="Dias de folga no período">FOLGA</th><th class="tt" title="Faltas no período">FALTA</th></tr></thead><tbody>';
   ps.forEach(p=>{ const mbs=membrosDe(p), k='p:'+p.id;
     h+='<tr class="grp eqg"><td class="nm"><b>'+esc(normName(p.nome)||'(SEM NOME)')+'</b><small>'+esc(pessoaSub(p))+'</small></td>'+ds.map(d=>{ const al=(IX.aloc.get(k)||new Map()).get(d)||[], fo=folgaDias(k).get(d), a=al[0], e=a&&evById(a.eventoId);
-      return '<td class="d tg'+(isWE(d)?' we':'')+'">'+(fo?'<span class="eqst f">FOLGA</span>':a?'<span class="eqst" style="--evc:'+(e?evCor(e.id):'var(--line-strong)')+'" title="'+esc((e?evNome(e):'')+(a.fase?' · '+PHN[a.fase]:''))+'">'+esc(e?sigla(e.id):'?')+(a.fase&&!mes?' '+FASE_L[a.fase]:'')+(al.length>1?' +':'')+'</span>':'')+'</td>'; }).join('')+'<td class="tt"></td><td class="tt"></td></tr>';
-    if(!mbs.length){ h+='<tr><td class="nm"><small>Sem integrantes no cadastro.</small></td><td colspan="'+(ds.length+2)+'" class="hintc">Escreva o líder e os integrantes no Cadastro (ex.: ZÉ, TIÃO, MARCOS) pra planejar a folga de cada um.</td></tr>'; return; }
-    mbs.forEach(mb=>{ let trab=0, folg=0;
+      return '<td class="d tg'+(isWE(d)?' we':'')+'">'+(fo?'<span class="eqst f">FOLGA</span>':a?'<span class="eqst" style="--evc:'+(e?evCor(e.id):'var(--line-strong)')+'" title="'+esc((e?evNome(e):'')+(a.fase?' · '+PHN[a.fase]:''))+'">'+esc(e?sigla(e.id):'?')+(a.fase&&!mes?' '+FASE_L[a.fase]:'')+(al.length>1?' +':'')+'</span>':'')+'</td>'; }).join('')+'<td class="tt"></td><td class="tt"></td><td class="tt"></td></tr>';
+    if(!mbs.length){ h+='<tr><td class="nm"><small>Sem integrantes no cadastro.</small></td><td colspan="'+(ds.length+3)+'" class="hintc">Escreva o líder e os integrantes no Cadastro (ex.: ZÉ, TIÃO, MARCOS) pra planejar a folga de cada um.</td></tr>'; return; }
+    mbs.forEach(mb=>{ let trab=0, folg=0, falt=0;
       const cells=ds.map(d=>{ const s=sitMembro(p,mb,d), cls='d'+(isWE(d)?' we':'')+(d===t?' today':''), seq=s==='T'?seqTrab(p,mb,d):0, exc=seq>5;
-        if(s==='T') trab++; if(s==='F') folg++;
+        if(s==='T') trab++; if(s==='F') folg++; if(s==='X') falt++;
         const al=s==='T'?((IX.aloc.get(k)||new Map()).get(d)||[]):[], a=al[0], e=a&&evById(a.eventoId);
         const attrs=ro?'':' data-mfolga="'+esc(p.id)+'" data-mb="'+esc(mb)+'" data-k="'+d+'"';
+        if(s==='X'){ const fx=faltaMembroDias(p.id,mb).get(d); return '<td class="'+cls+'"><div class="fc falta"'+attrs+' title="'+esc(mb+' · FALTOU'+(tr(fx.obs)?' · '+normName(fx.obs):'')+' · clique pra tirar')+'">F</div></td>'; }
         if(s==='F') return '<td class="'+cls+'"><div class="fc folga"'+attrs+' title="'+esc(mb+' · FOLGA · clique pra tirar')+'">'+(mes?'F':'FOLGA')+'</div></td>';
         if(s==='T') return '<td class="'+cls+'"><div class="fc'+(exc?' exc':'')+'"'+attrs+' style="--evc:'+(e?evCor(e.id):'var(--line-strong)')+'" title="'+esc(mb+' · '+(e?evNome(e):'')+(a.fase?' · '+PHN[a.fase]:'')+' · '+seq+'º DIA SEGUIDO'+(exc?' · PASSOU DE 5: DAR FOLGA':'')+' · clique pra folgar')+'">'+esc(mes?(a.fase?FASE_L[a.fase]:'•'):(e?sigla(e.id):'?'))+(!mes&&a.fase?'<small>'+FASE_L[a.fase]+'</small>':'')+'</div></td>';
         return '<td class="'+cls+(ro?'':' novo nf')+'"'+attrs+' title="'+esc(mb+' · sem escala · clique pra marcar folga')+'"></td>'; }).join('');
       const semExc=per.modo==='semana'&&trab>5;
-      h+='<tr class="mb"><td class="nm"><b title="'+esc(mb)+'">'+esc(mb)+'</b></td>'+cells+'<td class="tt'+(semExc?' warn':'')+'" title="'+(semExc?'Mais de 5 dias na semana':'')+'">'+trab+'</td><td class="tt">'+folg+'</td></tr>'; }); });
+      h+='<tr class="mb"><td class="nm"><b title="'+esc(mb)+'">'+esc(mb)+'</b></td>'+cells+'<td class="tt'+(semExc?' warn':'')+'" title="'+(semExc?'Mais de 5 dias na semana':'')+'">'+trab+'</td><td class="tt">'+folg+'</td><td class="tt'+(falt?' falta':'')+'">'+falt+'</td></tr>'; }); });
   h+='</tbody></table></div>';
-  h+='<div class="flegend"><span><i class="folga"></i>folga</span><span><i class="exc"></i>passou de 5 dias seguidos: dar folga (5x2)</span><span>Linha cinza = o que a equipe tem no dia · '+(ro?'':'clique no dia da pessoa pra folgar ou tirar a folga · ')+'TRAB./FOLGA = total no período</span></div>';
+  h+='<div class="flegend"><span><i class="folga"></i>folga</span><span><i class="falta"></i>F vermelho = faltou</span><span><i class="exc"></i>passou de 5 dias seguidos: dar folga (5x2)</span><span>Linha cinza = o que a equipe tem no dia · '+(ro?'':'clique no dia da pessoa pra folgar ou tirar a folga · ')+'TRAB./FOLGA = total no período</span></div>';
   return h;
 }
 async function pdfEscalaPessoas(){
@@ -3208,15 +3237,16 @@ async function pdfEscalaPessoas(){
   const ps=pessoas('EQUIPE').filter(p=>!pes||pes==='p:'+p.id);
   pdfCab(P,'ESCALA POR PESSOA',perTxt(per),pes?'SÓ '+pesNomeKey(pes):'TODAS AS EQUIPES');
   const wN=Math.floor((P.CW-44-22)/ds.length*100)/100;
-  const cols=[{h:'PESSOA',w:44,b:true,fs:7}].concat(ds.map(d=>({h:(mes?d.slice(8):fmtDM(d))+'\n'+(mes?DIAS3[parseISO(d).getDay()].slice(0,1):DIAS3[parseISO(d).getDay()]),w:wN,fs:mes?6.2:7,b:true}))).concat([{h:'TRAB.',w:11,b:true},{h:'FOLGA',w:11}]);
+  const wN2=Math.floor((P.CW-44-33)/ds.length*100)/100;
+  const cols=[{h:'PESSOA',w:44,b:true,fs:7}].concat(ds.map(d=>({h:(mes?d.slice(8):fmtDM(d))+'\n'+(mes?DIAS3[parseISO(d).getDay()].slice(0,1):DIAS3[parseISO(d).getDay()]),w:wN2,fs:mes?6.2:7,b:true}))).concat([{h:'TRAB.',w:11,b:true},{h:'FOLGA',w:11},{h:'FALTA',w:11,b:true}]);
   const rows=[];
   ps.forEach(p=>{ const k='p:'+p.id;
-    rows.push({c:[normName(p.nome)].concat(ds.map(d=>{ if(folgaDias(k).has(d)) return 'FOLGA'; const a=((IX.aloc.get(k)||new Map()).get(d)||[])[0]; if(!a) return ''; const e=evById(a.eventoId); return mes?(a.fase?FASE_L[a.fase]:'•'):(e?sigla(e.id):'?')+(a.fase?' '+FASE_L[a.fase]:''); })).concat(['','']),mark:C.navy||C.line});
-    membrosDe(p).forEach(mb=>{ let tb=0, fg=0; const c=ds.map(d=>{ const s=sitMembro(p,mb,d); if(s==='F'){ fg++; return mes?'F':'FOLGA'; } if(s!=='T') return ''; tb++; const a=((IX.aloc.get(k)||new Map()).get(d)||[])[0], e=a&&evById(a.eventoId), ex=seqTrab(p,mb,d)>5?'!':''; return (mes?(a.fase?FASE_L[a.fase]:'•'):(e?sigla(e.id):'?')+(a.fase?' '+FASE_L[a.fase]:''))+ex; });
-      rows.push({c:['   '+mb].concat(c).concat([String(tb),String(fg)]),mark:C.line}); }); });
+    rows.push({c:[normName(p.nome)].concat(ds.map(d=>{ if(folgaDias(k).has(d)) return 'FOLGA'; const a=((IX.aloc.get(k)||new Map()).get(d)||[])[0]; if(!a) return ''; const e=evById(a.eventoId); return mes?(a.fase?FASE_L[a.fase]:'•'):(e?sigla(e.id):'?')+(a.fase?' '+FASE_L[a.fase]:''); })).concat(['','','']),mark:C.navy||C.line});
+    membrosDe(p).forEach(mb=>{ let tb=0, fg=0, fx=0; const c=ds.map(d=>{ const s=sitMembro(p,mb,d); if(s==='X'){ fx++; return mes?'FT':'FALTOU'; } if(s==='F'){ fg++; return mes?'F':'FOLGA'; } if(s!=='T') return ''; tb++; const a=((IX.aloc.get(k)||new Map()).get(d)||[])[0], e=a&&evById(a.eventoId), ex=seqTrab(p,mb,d)>5?'!':''; return (mes?(a.fase?FASE_L[a.fase]:'•'):(e?sigla(e.id):'?')+(a.fase?' '+FASE_L[a.fase]:''))+ex; });
+      rows.push({c:['   '+mb].concat(c).concat([String(tb),String(fg),fx?String(fx):'-']),mark:fx?C.bad:C.line}); }); });
   if(!rows.length){ P.font('bold',11); P.tc(C.muted); P.T('NENHUMA EQUIPE CADASTRADA.',P.M,P.y+4); }
   else pdfTabela(P,cols,rows);
-  P.font('normal',7.4); P.tc(C.muted); P.wrap('LINHA DA EQUIPE = ONDE ELA ESTÁ NO DIA · F/FOLGA = FOLGA · ! = PASSOU DE 5 DIAS SEGUIDOS (DAR FOLGA, ESCALA 5X2) · M MONTAGEM · E EVENTO · D DESMONTAGEM',P.CW).forEach(l=>{ P.ensure(5); P.T(l,P.M,P.y+3); P.y+=3.6; });
+  P.font('normal',7.4); P.tc(C.muted); P.wrap('LINHA DA EQUIPE = ONDE ELA ESTÁ NO DIA · F/FOLGA = FOLGA · FT/FALTOU = FALTA · ! = PASSOU DE 5 DIAS SEGUIDOS (DAR FOLGA, ESCALA 5X2) · M MONTAGEM · E EVENTO · D DESMONTAGEM',P.CW).forEach(l=>{ P.ensure(5); P.T(l,P.M,P.y+3); P.y+=3.6; });
   pdfRodape(P,'ESCALA POR PESSOA · '+perTxt(per));
   abrirPDF(pdfNome('ESCALA-PESSOAS',per),P.doc.output('arraybuffer'));
 }
